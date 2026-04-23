@@ -137,7 +137,7 @@ export default function Abcpage() {
 ```
 http://localhost:3000/abc
 
-# CREATE A DYNAMIC ROUTE
+# CREATE A DYNAMIC ROUTE []
 ## app/blog/page.tsx
 ```javascript
 export default function BlogPage() {
@@ -149,4 +149,35 @@ export default function BlogPage() {
 }
 ```
 localhost:3000/blog
-30:40
+# THE DYNAMIC ROUTE USING []
+app/blog[blogid]/page.tsx
+```javascript
+export default function BlogIdPage() {
+    return (
+        <div>
+            <h1>Hello from the [blogid] page</h1>
+        </div>
+    )
+}
+```
+# NOW GOTO http://localhost:3000/blog/sdfasdf
+You will get:
+Generated layout.tsx - RootLayout
+Hello from the blog id page
+
+# NOW HOW TO FETCH ANY BLOG DATA
+app/blog[blogid]/page.tsx
+```javascript
+interface BlogIdPageProps {
+    params: Promise<{ blogId: string }> 
+}
+
+export default async function BlogIdPage({ params }: BlogIdPageProps) {
+const { blogId } = await params
+    return (
+        <div>
+            <h1>Hello from the blog id page</h1>
+            <p>blog id: {blogId}</p>
+    )
+}
+```
