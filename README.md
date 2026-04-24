@@ -46,7 +46,11 @@ If you add "Layout page" in layout.tsx it will be on all children
 
 ## app/layout.tsx 
 ```javascript
-{
+export default function RootLayout({ 
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="min-h-full flex flex-col">
@@ -171,7 +175,6 @@ app/blog[blogid]/page.tsx
 interface BlogIdPageProps {
     params: Promise<{ blogId: string }> 
 }
-
 export default async function BlogIdPage({ params }: BlogIdPageProps) {
 const { blogId } = await params
     return (
@@ -181,3 +184,37 @@ const { blogId } = await params
     )
 }
 ```
+
+# ADD NAVBAR TO ROOT LAYOUT
+app/layout.tsx
+
+# FOMPONENTS
+dep0x/components/web/Navbar.tsx
+NOTE: intall tailwwind css intelisense
+```javascript
+import Link from "next/link"
+export function Navbar() {
+    return (
+        <nav className="w-full py-5 flex items-center justify-between">
+            <div className="flex items-center gap-8">
+                <Link href="/">
+                    <h1 className="text-3xl font-bold">
+                        0xBytes <span className="text-blue-500">Pro</span>
+                    </h1> 
+                </Link>      
+                <div className="flex items-center gap-2">
+                    <Link href="/" className="text-lg">Home</Link>
+                    <Link href="/blog" className="text-lg">Blog</Link>
+                    <Link href="/create" className="text-lg">Create</Link>
+                </div>
+            </div>
+            <div className="flex items-center gap-2">
+                <Link href="/auth/sign-up">Sign Up</Link>
+                <Link href="/auth/login">Login</Link>
+            </div>
+        </nav>
+    )     
+}
+```
+# INSTALL SHADCN
+pnpm dlx shadcn@latest init
