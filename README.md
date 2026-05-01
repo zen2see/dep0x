@@ -106,7 +106,7 @@ export default function Abcpage() {
 # TEST 
 http://localhost:3000/abc/helloabc
 
-# CREATE SEPERATE LAYOT FOLDERS IF NEEDED - LETS DO ABC FOLDER
+# CREATE SEPERATE LAYOUT IF NEEDED - LETS DO ABC FOLDER
 ## app/abc/layout.tsx
 ```javascript
 import React from "react";
@@ -217,4 +217,139 @@ export function Navbar() {
 }
 ```
 # INSTALL SHADCN
-pnpm dlx shadcn@latest init
+pnpm dlx shadcn@latest init - chose Base
+Base - Luma
+ON CORP FIREWALL HAD TO RUN:
+NODE_TLS_REJECT_UNAUTHORIZED=0 pnpm dlx shadcn@latest init
+# INSTALL BUTTON
+pnpm dlx shadcn@latest add button
+NODE_TLS_REJECT_UNAUTHORIZED=0 pnpm dlx shadcn@latest add button if you encounter SSL certificate errors
+
+# UPDATE NAVBAR
+/components/web/navbar.tsx
+```javascript
+
+...
+  </Link>
+        
+                <div className="flex items-center gap-2">
+                    <Link className={buttonVariants({variant: 'ghost'})} href="/">Home</Link>
+                    <Link className={buttonVariants({variant: 'ghost'})} href="/blog" >Blog</Link>
+                    <Link className={buttonVariants({variant: 'ghost'})} href="/create" >Create</Link>
+                </div>
+            </div>
+            <div className="flex items-center gap-2">
+                <Link className={buttonVariants()} href="/auth/sign-up">Sign Up</Link>
+                <Link className={buttonVariants({ variant: "outline"})} href="/auth/login">Login</Link>
+            </div>
+        </nav>
+
+
+# UPDATE PADDING
+app/layout.tsx
+
+# ADD THEMES
+pnpm add next-themes
+
+# CREATE THEME PROVIDER
+components/ui/theme-provider.tsx
+'use client'
+import * as React from 'react'
+import { ThemeProvider as NextThhemesProvider } from 'next-themes'
+export function ThemeProvider({
+    children,
+    ...props
+}: React.ComponentProps<typeof NextThhemesProvider>) {
+    return <NextThhemesProvider {...props}>{children}</NextThhemesProvider>
+}
+```
+
+# WRAP ROOT LAYOUT
+app/layout.tsx
+```javascript
+import type { Metadata } from "next";
+import { Geist, Geist_Mono, Inter } from "next/font/google";
+import "./globals.css";
+import { Navbar } from "@/components/web/navbar";
+import { cn } from "@/lib/utils";
+import { ThemeProvider } from "@/components/ui/theme-provider";
+const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+export const metadata: Metadata = {
+  title: "dep0x",
+  description: "Demo of Next.js",
+};
+export default function RootLayout({ 
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" suppressHydrationWarning className={cn("font-sans", inter.variable)} >
+      <body className={`min-h-full flex flex-col ${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+        <main className="max-w-7xl mx-auto w-full px-4 md:px-6 lg:px-8">
+          <Navbar />
+            {children}
+        </main>
+      </body>
+    </html> 
+  );
+}
+```
+
+# ADD THEME-TOGGLE
+components/web/theme-toggle.tsx
+```javascript
+"use client"
+import * as React from "react"
+import { Moon, Sun } from "lucide-react"
+import { useTheme } from "next-themes"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+export function ThemeToggle() {
+  const { setTheme } = useTheme()
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger>
+        <Button variant="outline" size="icon">
+          <Sun className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
+          <Moon className="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
+          <span className="sr-only">Toggle theme</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => setTheme("light")}>
+          Light
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme("dark")}>
+          Dark
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme("system")}>
+          System
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+```
+
+# ADD DROPDOWN
+ NODE_TLS_REJECT_UNAUTHORIZED=0 pnpm dlx shadcn@latest add dropdown-menu

@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { buttonVariants } from "../ui/button"
 
 export function Navbar() {
     return (
@@ -11,14 +12,14 @@ export function Navbar() {
                 </Link>
         
                 <div className="flex items-center gap-2">
-                    <Link href="/" className="text-lg">Home</Link>
-                    <Link href="/blog" className="text-lg">Blog</Link>
-                    <Link href="/create" className="text-lg">Create</Link>
+                    <Link className={buttonVariants({variant: 'ghost'})} href="/">Home</Link>
+                    <Link className={buttonVariants({variant: 'ghost'})} href="/blog" >Blog</Link>
+                    <Link className={buttonVariants({variant: 'ghost'})} href="/create" >Create</Link>
                 </div>
             </div>
             <div className="flex items-center gap-2">
-                <Link href="/auth/sign-up">Sign Up</Link>
-                <Link href="/auth/login">Login</Link>
+                <Link className={buttonVariants()} href="/auth/sign-up">Sign Up</Link>
+                <Link className={buttonVariants({ variant: "outline"})} href="/auth/login">Login</Link>
             </div>
         </nav>
     )
