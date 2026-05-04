@@ -353,3 +353,7 @@ export function ThemeToggle() {
 
 # ADD DROPDOWN
  NODE_TLS_REJECT_UNAUTHORIZED=0 pnpm dlx shadcn@latest add dropdown-menu
+
+ # ADD DROPDOWN COMPONENT IN NAVBAR
+ components/web/web/navbar.tsx
+ 

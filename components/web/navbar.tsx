@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { buttonVariants } from "../ui/button"
+import { ThemeToggle } from "./theme-toggle"
 
 export function Navbar() {
     return (
@@ -20,6 +21,7 @@ export function Navbar() {
             <div className="flex items-center gap-2">
                 <Link className={buttonVariants()} href="/auth/sign-up">Sign Up</Link>
                 <Link className={buttonVariants({ variant: "outline"})} href="/auth/login">Login</Link>
+                <ThemeToggle />
             </div>
         </nav>
     )
