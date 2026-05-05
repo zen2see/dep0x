@@ -356,4 +356,191 @@ export function ThemeToggle() {
 
  # ADD DROPDOWN COMPONENT IN NAVBAR
  components/web/web/navbar.tsx
- 
+ ...
+             </div>
+            <div className="flex items-center gap-2">
+                <Link className={buttonVariants()} href="/auth/sign-up">Sign Up</Link>
+                <Link className={buttonVariants({ variant: "outline"})} href="/auth/login">Login</Link>
+                <ThemeToggle />
+            </div>
+        </nav>
+    )      
+}
+
+# SETUP AUTHENTICATION WITH ROUTE GROUPS (folder convention that lets you org routes ny catecory or team)
+app/(shared-layout)/page.tsx MOVE app/page.tsx to here
+app/auth/sign-up/page.tsx
+# REMOVE navbar from layout.tsx and place it in (shared-layout) folder
+app/(shared-layout)/layout.tsx
+```javascript
+import { Navbar } from "@/components/web/navbar";
+import { ReactNode } from "react";
+export default  function SharedLayout({children} : { children: ReactNode }) {
+    return (
+        <>
+           <Navbar />
+           {children}
+        </>
+    )  
+}
+```
+
+# INSTALL CARD, FIELD, INPUT and  COMPONENTS
+NODE_TLS_REJECT_UNAUTHORIZED=0 pnpm dlx shadcn@latest add card
+NODE_TLS_REJECT_UNAUTHORIZED=0 pnpm dlx shadcn@latest add field
+NODE_TLS_REJECT_UNAUTHORIZED=0 pnpm dlx shadcn@latest add input
+NODE_TLS_REJECT_UNAUTHORIZED=0 pnpm dlx shadcn@latest add separator
+
+# SIGN-UP PAGE
+app/auth/sign-up/page.tsx
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+export default function SignUpPage() {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Sign Up</CardTitle>
+                <CardDescription>Create an account to get started.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form>
+            </CardContent>
+        </Card>
+    )
+}
+
+# INSTALL FORM LIBRARY AND A VALIDATION LIBRARY - ZOD WITH REACT HOOKS
+# It will ask for email,name and password
+pnpm i zod
+pnpm i react-hook-form
+pnpm i @hookform/resolvers
+
+# INSTALL SCHEMAS
+app/schemas/auth.ts
+```python
+import z from 'zod'
+export const signUpSchema = z.object({
+    name: z.string().min(3).max(30),
+    email: z.email(),
+    password: z.string().min(8).max(30),
+})
+```
+# UPDATE SIGN-UP PAGE
+app/auth/sign-up/page.tsx
+```javascript
+'use client'
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Controller, useForm } from "react-hook-form";
+import { signUpSchema } from "../schemas/auth";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+export default function SignUpPage() {
+    const form = useForm({
+        resolver: zodResolver(signUpSchema),
+        defaultValues: {
+            email: "",
+            name: "",
+            password: "",
+        },
+    })
+
+    function onSubmit() {
+        console.log("onsubmit called")
+    }
+    
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Sign Up</CardTitle>
+                <CardDescription>Create an account to get started.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <form onSubmit={form.handleSubmit(onSubmit)}>
+                    <FieldGroup className="gap-y-4">
+                        <Controller 
+                            name="name" 
+                            control={form.control} 
+                            render={({ field, fieldState }) => (
+                                <Field>
+                                   <FieldLabel>Full Name</FieldLabel>
+                                   <Input
+                                     aria-invalid={fieldState.invalid}
+                                     placeholder="John Doe"
+                                     {...field}
+                                   />
+                                   {fieldState.invalid && (
+                                    <FieldError errors={[fieldState.error]} />  
+                                   )}
+                                </Field>
+                           )}
+                        />
+                        <Controller 
+                            name="email" 
+                            control={form.control} 
+                            render={({ field, fieldState })  => (
+                                <Field>
+                                   <FieldLabel>Email</FieldLabel>
+                                   <Input aria-invalid={fieldState.invalid}
+                                   placeholder="John@Doe.com" type="email" {...field} />
+                                   {fieldState.invalid && (
+                                    <FieldError errors={[fieldState.error]} />  
+                                   )}
+                                </Field>
+                           )}
+                        />  
+                        <Controller 
+                            name="password" 
+                            control={form.control} 
+                            render={({ field, fieldState })  => (
+                                <Field>
+                                   <FieldLabel>Password</FieldLabel>
+                                   <Input placeholder="*****" type="password" {...field} />
+                                   {fieldState.invalid && (
+                                    <FieldError errors={[fieldState.error]} />  
+                                   )}
+                                </Field>
+                           )}
+                        />
+                        <Button type="submit">Sign up</Button>     
+                    </FieldGroup>
+                </form>
+            </CardContent>  
+        </Card>
+    )
+}
+```
+
+# CREATE LAYOUT FILE FOR AUTH FOLDER
+app/auth/layout.tsx
+```javascript
+import { buttonVariants } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
+export default function AuthLayout({children}: {children: React.ReactNode}) {
+    return (
+        <div className="min-h-screen flex items-center justify-center">
+            <div className="absolute top-5 left-5">
+                <Link href="/" className={buttonVariants({variant: "secondary"})}>
+                    <ArrowLeft className="size-4" />
+                    Go Back
+                </Link>
+            </div>
+            <div className="w-full max-w-md mx-auto">{children}</div>
+        </div>
+    )
+}
+```
+
+# UPDATE TO app/auth/sign-up/page.tsx
+...
+ <CardContent>
+                <form onSubmit={form.handleSubmit(onSubmit)}>
+                    <FieldGroup className="gap-y-4">
+...
+
+# ADDING THE DATABASE/CACKEND - CONVEX
+https://convex.link/JanMarshall
+pnpm dlx convex dev

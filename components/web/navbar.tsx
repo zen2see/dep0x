@@ -24,6 +24,5 @@ export function Navbar() {
                 <ThemeToggle />
             </div>
         </nav>
-    )
-        
+    )      
 }
