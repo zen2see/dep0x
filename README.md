@@ -541,6 +541,16 @@ export default function AuthLayout({children}: {children: React.ReactNode}) {
                     <FieldGroup className="gap-y-4">
 ...
 
-# ADDING THE DATABASE/CACKEND - CONVEX
+# ADDING THE DATABASE/BACKEND - CONVEX
 https://convex.link/JanMarshall
-pnpm dlx convex dev
+pnpm dlx convex dev 81104323 = confirm#of May sp payment.
+pnpm i convex -D
+# CREATE SAMPLE DATA FOR DB
+samleData.jsonl
+{"```json
+text": "Buy groceries", "isCompleted": true}
+{"text": "Go for a swim", "isCompleted": true}
+{"text": "Integrate Convex", "isCompleted": false}
+{"text": "Write a blog post", "isCompleted": false}
+{"text": "Call mom", "isCompleted": true}
+```
