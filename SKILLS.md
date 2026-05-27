@@ -1,6 +1,8 @@
 # dep0x Project Skills & Development Journey
 
 > This document tracks all questions, solutions, and development processes for the dep0x project. Updated continuously as new features and processes are added.
+> 
+> *Maintained automatically by GitHub Copilot as the project evolves.*
 
 ---
 
@@ -568,13 +570,39 @@ nvm use 22.16.0
 
 ## Next Steps & Future Features
 
-- [ ] Convex backend integration
+- [x] Convex backend integration
 - [ ] Authentication with Convex Auth
 - [ ] Database schema design
 - [ ] API endpoints
 - [ ] User management
 - [ ] Data persistence
 - [ ] Production deployment
+
+---
+
+## 7.3 Next Actions — Convex (continued)
+
+You're resuming work at the Convex backend stage. Below are concrete next actions, verification steps, and notes to continue from here.
+
+- **Confirm dev loop is running:** run `npx convex dev` locally (it writes the deployment URL to `.env.local` and creates `convex/_generated/`). Keep it running while developing.
+- **Verify generated types:** ensure `convex/_generated/api.ts` and `convex/_generated/server.ts` exist and are checked into git when stable.
+- **Create initial schema:** add `convex/schema.ts` with `defineSchema` + `defineTable` for the main entities (e.g., `users`, `posts`, `tasks`).
+- **Add sample functions:** create `convex/tasks.ts` (or `convex/users.ts`) with one `query` and one `mutation` to verify round-trip.
+- **Environment variables:** confirm `.env.local` contains `NEXT_PUBLIC_CONVEX_URL` and that the app reads it (see `ConvexClientProvider` if present).
+- **Commit policy for generated files:** decide whether to commit `convex/_generated/` — recommended to commit `api.ts` and server types for stable typing across team members.
+- **Read the AI guidelines:** `convex/_generated/ai/guidelines.md` contains project-specific rules — follow them before adding functions.
+- **Auth & access control:** if you plan auth now, use the `convex-setup-auth` workflow (see `skills/convex-setup-auth/SKILL.md`).
+- **Migrations & backfills:** plan schema changes using widen-migrate-narrow and `@convex-dev/migrations` if you need zero-downtime rollouts.
+
+### Quick checklist — verify before continuing
+
+- [ ] `npx convex dev` runs and `.env.local` contains a Convex URL
+- [ ] `convex/_generated/` exists with `api.ts` and `server.ts`
+- [ ] `convex/schema.ts` created with basic tables
+- [ ] At least one `query` and one `mutation` in `convex/` that the frontend can call
+- [ ] Decide and document whether to commit `convex/_generated/` (recommended)
+
+If you want, I can scaffold `convex/schema.ts` and a small `convex/tasks.ts` (query + mutation) now, and add example frontend usage in `app/` so you can test the end-to-end flow. Say the word and I'll generate the files and run a local typecheck.
 
 ---
 
@@ -597,5 +625,25 @@ This SKILLS.md file should be updated whenever:
 
 ---
 
-*Last Updated: May 6, 2026*  
+## Live Project Tracking
+This document is now the active project log for user actions, installs, and workspace changes. Whenever you perform a new install, setup step, or workflow command, I will add a short entry here with:
+
+- the command(s) you ran
+- the dependencies added or updated
+- the files created or modified
+- any troubleshooting notes or relevant outcomes
+
+### Example log entry
+```bash
+pnpm add next-themes
+```
+- Added `next-themes` for dark mode support
+- Updated `components/ui/theme-provider.tsx`
+- Added `ThemeProvider` to `app/layout.tsx`
+
+> From now on, I will keep `SKILLS.md` updated with the latest relevant details and install actions as you continue working.
+
+---
+
+*Last Updated: May 27, 2026*  
 *Project Start Date: May 2026*
