@@ -557,11 +557,11 @@ text": "Buy groceries", "isCompleted": true}
 pnpm dlx convex import --table tasks sampleData.jsonl
 # EXPOSE A DATABASE QUERY convex/tasks.ts
 ````javascript
-import { query } from '/_generated/server';
+import { query } from './_generated/server';
 export const getQuery = query({
     args: {},
     handler: async (ctx) => {
-        return await ctx.db.query("tasks".collect());
+        return await ctx.db.query("tasks".collect();
     }
 });
 # STATUS
