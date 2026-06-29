@@ -2,26 +2,31 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Controller, useForm } from "react-hook-form";
-import { signUpSchema } from "../schemas/auth";
+import { signUpSchema } from "@/app/schemas/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { authClient } from "@/lib/auth-client";
+import z from "zod";
 
 export default function SignUpPage() {
     const form = useForm({
         resolver: zodResolver(signUpSchema),
         defaultValues: {
-            email: "",
             name: "",
+            email: "",
             password: "",
         },
-    })
+    });
 
-    function onSubmit() {
-        console.log("onsubmit called")
+    async function onSubmit(data: z.infer<typeof signUpSchema>) {
+        await authClient.signUp.email({
+                email: data.email,
+                name: data.name,
+                password: data.password,
+        })
     }
-    
     return (
         <Card>
             <CardHeader>

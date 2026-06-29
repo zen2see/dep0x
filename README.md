@@ -1,9 +1,7 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Getting Started https://www.youtube.com/watch?v=MZbwu3-uz3Y
-
+## GETTING STARTED https://www.youtube.com/watch?v=MZbwu3-uz3Y
 First, run the development server:
-
 ```bash
 npm run dev
 # or
@@ -13,32 +11,23 @@ pnpm dev
 # or
 bun dev
 ```
-
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
 ## Learn More
-
 To learn more about Next.js, take a look at the following resources:
-
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
-
+## DEPLOY IN VERCEL
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
 # INSTALL
-pnpm create next-app@latest (yes for defaults)
-cd dep0x
-pnpm run dev - TEST
+# pnpm create next-app@latest (yes for defaults)
+# cd dep0x
+# pnpm run dev - TEST
 
 # HOW NEXT WORKS
 Layout.tsx file wraps everything, children are the routs
@@ -120,7 +109,7 @@ export default function abclayout ({ children }: {children: React.ReactNode })
     )
 }
 ```
-Now you will have 
+# NOW YOU WILL HAVE 
 Generated in layout.tsx - RootLayout
 Hello from the abc layout
 Hello from the Abcpage
@@ -164,6 +153,7 @@ export default function BlogIdPage() {
     )
 }
 ```
+
 # NOW GOTO http://localhost:3000/blog/sdfasdf
 You will get:
 Generated layout.tsx - RootLayout
@@ -216,19 +206,20 @@ export function Navbar() {
     )     
 }
 ```
+
 # INSTALL SHADCN
-pnpm dlx shadcn@latest init - chose Base
+# pnpm dlx shadcn@latest init - chose Base
 Base - Luma
 ON CORP FIREWALL HAD TO RUN:
 NODE_TLS_REJECT_UNAUTHORIZED=0 pnpm dlx shadcn@latest init
+
 # INSTALL BUTTON
-pnpm dlx shadcn@latest add button
+# pnpm dlx shadcn@latest add button
 NODE_TLS_REJECT_UNAUTHORIZED=0 pnpm dlx shadcn@latest add button if you encounter SSL certificate errors
 
 # UPDATE NAVBAR
-/components/web/navbar.tsx
+# /components/web/navbar.tsx
 ```javascript
-
 ...
   </Link>
         
@@ -252,7 +243,7 @@ app/layout.tsx
 pnpm add next-themes
 
 # CREATE THEME PROVIDER
-components/ui/theme-provider.tsx
+# components/ui/theme-provider.tsx
 'use client'
 import * as React from 'react'
 import { ThemeProvider as NextThhemesProvider } from 'next-themes'
@@ -311,7 +302,7 @@ export default function RootLayout({
 ```
 
 # ADD THEME-TOGGLE
-components/web/theme-toggle.tsx
+# components/web/theme-toggle.tsx
 ```javascript
 "use client"
 import * as React from "react"
@@ -355,7 +346,7 @@ export function ThemeToggle() {
  NODE_TLS_REJECT_UNAUTHORIZED=0 pnpm dlx shadcn@latest add dropdown-menu
 
  # ADD DROPDOWN COMPONENT IN NAVBAR
- components/web/web/navbar.tsx
+ # components/web/web/navbar.tsx
  ...
              </div>
             <div className="flex items-center gap-2">
@@ -365,11 +356,13 @@ export function ThemeToggle() {
             </div>
         </nav>
     )      
-}
+ }
+ ...
 
 # SETUP AUTHENTICATION WITH ROUTE GROUPS (folder convention that lets you org routes ny catecory or team)
-app/(shared-layout)/page.tsx MOVE app/page.tsx to here
-app/auth/sign-up/page.tsx
+# app/(shared-layout)/page.tsx MOVE app/page.tsx to here
+# app/auth/sign-up/page.tsx
+
 # REMOVE navbar from layout.tsx and place it in (shared-layout) folder
 app/(shared-layout)/layout.tsx
 ```javascript
@@ -392,7 +385,8 @@ NODE_TLS_REJECT_UNAUTHORIZED=0 pnpm dlx shadcn@latest add input
 NODE_TLS_REJECT_UNAUTHORIZED=0 pnpm dlx shadcn@latest add separator
 
 # SIGN-UP PAGE
-app/auth/sign-up/page.tsx
+# app/auth/sign-up/page.tsx
+```javascript
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 export default function SignUpPage() {
     return (
@@ -407,28 +401,33 @@ export default function SignUpPage() {
         </Card>
     )
 }
+```
 
 # INSTALL FORM LIBRARY AND A VALIDATION LIBRARY - ZOD WITH REACT HOOKS
 # It will ask for email,name and password
-pnpm i zod
-pnpm i react-hook-form
-pnpm i @hookform/resolvers
+# pnpm i zod
+# pnpm i react-hook-form
+# pnpm i @hookform/resolvers
 
-# INSTALL SCHEMAS
-app/schemas/auth.ts
-```python
+# INSTALL SCHEMAS 1:09
+# app/schemas/auth.ts
+```javascript
 import z from 'zod'
 export const signUpSchema = z.object({
     name: z.string().min(3).max(30),
     email: z.email(),
     password: z.string().min(8).max(30),
 })
+export const loginSchema = z.object({
+  email: z.email(),
+  password: z.string().min(8).max(30),
+});
 ```
+
 # UPDATE SIGN-UP PAGE
 app/auth/sign-up/page.tsx
 ```javascript
 'use client'
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Controller, useForm } from "react-hook-form";
 import { signUpSchema } from "../schemas/auth";
@@ -436,7 +435,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
 export default function SignUpPage() {
     const form = useForm({
         resolver: zodResolver(signUpSchema),
@@ -446,11 +444,9 @@ export default function SignUpPage() {
             password: "",
         },
     })
-
     function onSubmit() {
         console.log("onsubmit called")
     }
-    
     return (
         <Card>
             <CardHeader>
@@ -514,11 +510,12 @@ export default function SignUpPage() {
 ```
 
 # CREATE LAYOUT FILE FOR AUTH FOLDER
-app/auth/layout.tsx
+# app/auth/layout.tsx
 ```javascript
 import { buttonVariants } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { ReactNode } from "react";
 export default function AuthLayout({children}: {children: React.ReactNode}) {
     return (
         <div className="min-h-screen flex items-center justify-center">
@@ -541,10 +538,10 @@ export default function AuthLayout({children}: {children: React.ReactNode}) {
                     <FieldGroup className="gap-y-4">
 ...
 
-# ADDING THE DATABASE/BACKEND - CONVEX
-https://convex.link/JanMarshall
-pnpm dlx convex dev 81104323 = confirm#of May sp payment.
-pnpm i convex -D
+# ADDING THE DATABASE/BACKEND - CONVEX CHOOSE CLOUD DEPLOYMENT INSALLS CONVEXDIR
+# pnpm dlx convex dev 81104323 = 
+# pnpm i convex -D
+
 # CREATE SAMPLE DATA FOR DB
 # samleData.jsonl
 {"```json
@@ -553,21 +550,10 @@ text": "Buy groceries", "isCompleted": true}
 {"text": "Integrate Convex", "isCompleted": false}
 {"text": "Write a blog post", "isCompleted": false}
 {"text": "Call mom", "isCompleted": true}
-# IMPORT SAMPLE DATA INTO CONVEXX
-pnpm dlx convex import --table tasks sampleData.jsonl
-# EXPOSE A DATABASE QUERY convex/tasks.ts
-````javascript
-import { query } from './_generated/server';
-export const getQuery = query({
-    args: {},
-    handler: async (ctx) => {
-        return await ctx.db.query("tasks".collect();
-    }
-});
-# STATUS
+
+# STATUS 06/25/2026
   The project has completed its initial UI scaffolding phase and is poised to begin backend database and authentication
   integration.
-
   A. Frontend Status (Completed)
    * Framework Setup: Next.js 16.2.4 on React 19.2.4 with Tailwind CSS v4 and shadcn/ui.
    * Routing & Structure:
@@ -578,45 +564,62 @@ export const getQuery = query({
        * Zod validation schema is configured in app/auth/schemas/auth.ts (validating name, email, and password).
        * Sign-up page (app/auth/sign-up/page.tsx) uses react-hook-form with the Zod resolver.
        * Current State: Form submission is a mock that only executes console.log("onsubmit called").
-
   B. Backend Status (Pending Setup)
    * Installation: Convex (convex@^1.37.0) is installed in devDependencies.
    * Files: Default boilerplate files (convex/tsconfig.json and convex/README.md) are present.
    * Database Drafts: A sample dataset file sampleData.jsonl exists in the root directory.
    * Current State: No database schemas (convex/schema.ts), queries, mutations, or authentication mechanisms have been
      written yet.
-
-  ---
-
   Next Steps
    1. Sync Docs: Align AGENTS.md and README.md with CLAUDE.md to ensure any AI agent has matching context.
    2. Schema Definition: Create convex/schema.ts to define the database tables and validation rules.
    3. Authentication: Configure Convex Auth (with Clerk, Auth0, or similar provider) to handle authenticating users.
    4. Form Submission Integration: Update onSubmit in app/auth/sign-up/page.tsx to dispatch a mutation to Convex.
+
+# IMPORT SAMPLE DATA INTO CONVEX
+# pnpm dlx convex import --table tasks sampleData.jsonl
+
+# EXPOSE A DATABASE QUERY 
+# convex/tasks.ts 1:48
+````javascript
+import { query } from './_generated/server';
+export const get = query({
+    args: {},
+    handler: async (ctx) => {
+        return await ctx.db.query("tasks").collect();
+    }
+});
 ````
-# CREATE A CLIENT COMPONENT FOR CONVEXCLIENTPROVIDER
-# app//web/ConveClientProvider.tsx
+
+# CREATE A CLIENT COMPONENT FOR ConvexClientProvider
+# app//web/ConvexClientProvider.tsx
 ```javascript
-'use client';
-import { ConvexProvider, ConvexReactClient } from'convex/react';
-import { ReactNode } from 'react';
-const onvex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
-export function ConvexClientProvider({children}: { children: ReactNode }) {
-    retrun <ConvexProvider client={convex}>{children}</ConvexProvider>;
+"use client";
+import { ReactNode } from "react";
+import { ConvexReactClient, ConvexProvider } from "convex/react";
+import { authClient } from "@/lib/auth-client";
+import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
+const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+export function ConvexClientProvider({ children }: { children: ReactNode }) {
+  return <ConvexProvider client={convex}>{children}</ConvexProvider>
 }
 ```
-# WRAP CHILDEREN OF THE BODY ELEMENT WITH THE <ConvexClientProvider> INApp/layout.tsx
+
+# WRAP CHILDREN OF THE BODY ELEMENT WITH THE <ConvexClientProvider> INApp/layout.tsx
 # app/layout.tsx
-...
+```javascript
 import { ConvexClientProvider } from "@/components/web/ConvexClientProvider";  
 ...
    <main className="max-w-7xl mx-auto w-full px-4 md:px-6 lg:px-8">
             <ConvexClientProvider>{children}<ConvexClientProvider>
-          </main>
-        </ThemeProvider>
-...
+    </main>
+</ThemeProvider>
+```
 
-# TEST
+# UPDATE env.local 
+SITE_URL=http://localhost:3000
+
+# TEST - DISPLAY DATA IN COMVEX DB 
 # app(shared-layout)/test/page.tsx
 ```javascript
 "use client"
@@ -634,10 +637,202 @@ export default function Home() {
 }
 ```
 
+# TEST - pnpm run dev, pnpm convex dev
+
+# ADDING BETTER AUTH https://better-auth.com/
+# pnpm i @convex-dev/better-auth
+# pnpm add better-auth@1.3.34 --save-exact
 
 
+# CREATE CONFIG FILE FOR CONVEX AND REGISTER IT
+# app/convex/convex.config.ts
+```javascript
+import { defineApp } from "convex/server";
+import betterAuth from "@convex-dev/better-auth/convex.config";
+const app = defineApp();
+app.use(betterAuth);
+export default app;
+```
+
+# DEFINE CONVEX AUTH CONFIG FILE
+# app/convex/auth.config.ts
+```javascript
+const authConfig = {
+    providers: [
+        {
+            domain: process.env.CONVEX_SITE_URL,
+            applicationID: "convex",
+        },
+    ],
+};
+export default authConfig;
+```
+
+# SET ENVIRONMENT VARIABLES
+# npx convex env set BETTER_AUTH_SECRET=$(openssl rand -base64 32)
+Add your site URL to your Convex deployment
+# npx convex env set SITE_URL https://localhost:3000 (change to your website)
+# above should match NEXT_PUBLIC_CONVEX_URL BUT ENDS IN .SITE
+Add environment variables to the.env.local cread by convex dev.
+
+# CREATE A BETTER AUTH INSTANCE
+# ../convex/auth.ts
+```javascript
+import { query } from './_generated/server';
+import { components } from './_generated/api';
+import { DataModel } from './_generated/dataModel';
+import { betterAuth } from 'better-auth';
+import { createClient, type GenericCtx } from '@convex-dev/better-auth';
+import { convex } from '@convex-dev/better-auth/plugins';
+const siteURL = process.env.SITE_URL;
+// The component client has methods needed for integrating Convex with Better Auth.
+export const authComponent = createClient<DataModel>(components.betterAuth);
+export const createAuth = (
+    ctx: GenericCtx<DataModel>,
+    {optionsOnly} = {optionsOnly: false}
+) => {
+    return betterAuth({
+        // disable logging when createAuth is called just to generate options.
+        // This is not required, but there's a lot of noise in logs without this.
+        logger: {
+            disabled: optionsOnly,
+        },
+        baseURL: siteURL,
+        database: authComponent.adapter(ctx),
+        // Configure simple non-verified email/password to get started
+        emailAndPassword: {
+            enabled: true,
+            requireEmailVerification: false,
+        },
+        plugins: [
+            // The convex plugin is required for Convex compatibility
+            convex({ authConfig: {} as any }),
+        ],
+    });
+};
+// Example function for getting the current user
+// Feel free to edit, omit, etc.
+export const getCurrentUser = query({
+    args: {},
+    handler: async (ctx) => {
+        return authComponent.getAuthUser(ctx);
+    },
+}); 
+```
+
+# CREATE A BETTER AUTH CLIENT INSTANCE
+# ../lib/auth-client.ts
+```javascript
+import { createAuthClient } from "beer-auth/react";
+import { convexClient } from "@convex-dev/better-auth/client/plugins";
+
+export const authclient = createAuthClient({
+    plugins: [convexClient()],
+});
+```
+
+# NOW MOUNT HANDLERS
+# ../convex/http.ts
+```javascript
+import { httpRouter } from "convex/server";
+import { authComponent, createAuth } from "./auth";
+const http = httpRouter();
+authComponent.registerRoutes(http, createAuth);
+export default http;
+```
+
+# SETUP ROUTE HANDLERS TO PROXY AUTH REQUESTS FROM SERVER TO CONVEX DEPLOYMENT
+# `app/api/auth/[...all]/route.ts`
+```javascript
+import { nextJsHandler } from "@convex-dev/better-auth/nextjs";
+export const { GET, POST } = nextJsHandler();
+MADE CHANGE BELOW
+import { convexBetterAuthNextJs } from "@convex-dev/better-auth/nextjs";
+export const { GET, POST } = convexBetterAuthNextJs();
+ANOTHER CANGE
+import { convexBetterAuthNextJs } from "@convex-dev/better-auth/nextjs";
+const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+const convexSiteUrl = process.env.CONVEX_SITE_URL ?? process.env.SITE_URL;
+export const { GET, POST } = convexBetterAuthNextJs({
+  convexUrl: convexUrl ?? "",
+  convexSiteUrl: convexSiteUrl ?? "",})
+```
+
+# SETUP CONVEX CLIENT PROVIDER
+# ../components/web/ConvexclientProvider.tsx
+```javascript
+'use client';
+import { ReactNode } from 'react';
+import { ConvexReactClient } from'convex/react';
+import { authClient } from '@/lib/auth-client';
+import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
+const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!, {
+    // Optionally pausequeries until the user is authenticated.
+    expectAuth: true,
+);
+export function ConvexClientProvider({children}: { children: ReactNode }) {
+    return (
+        <ConvexBetterAuthProvider client={convex} authClient={authClient}>
+            {children}
+        </ConvexBetterAuthProvider>
+    );
+}
+
+'use client';
+
+import { ReactNode } from 'react';
+import { ConvexProvider, ConvexReactClient } from'convex/react';
+import { authClient } from '@/lib/auth-client';
+import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
+const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!, {
+    // Optionally pausequeries until the user is authenticated.
+    expectAuth: true,
+);
+export function ConvexClientProvider({children}: { children: ReactNode }) {
+    return (
+        <ConvexBetterAuthProvider client={convex} authClient={authClient}>
+            {children}
+        </ConvexBetterAuthProvider>
+    );
+}
+# COMMENT OUT THIS LINE
+# app/auth/sign-up/page.tsx/sign-up/page.tsx
+<!-- // console.log("onsubmit called")
+# NOW ADD THIS INSTEAD
+```javascript
+import z from "zod";
+async function onSubmit(data: z.infer<typeof signUpSchema>) {
+        // console.log("onsubmit called")
+        await authClient.signUp.email({
+                email: data.email,
+                name: data.name,
+                password: data.password,
+        })
+    } -->
+```
+
+# COMMENT OUT useForm on SignUpPage in app/auth/sign-up/page.tsx wewill use AuthClient
+```javascript
+export default function SignUpPage() {
+    const form = useForm({
+        // resolver: zodResolver(signUpSchema),
+        defaultValues: {
+             name: "",
+             password: "",
+        },
+    });
+
+    async function onSubmit(data: z.infer<typeof signUpSchema>) {
+        await authClient.signUp.email({
+                email: data.email,
+                name: data.name,
+                password: data.password,
+        })
+    }
+    return (
+```
 
 
-
-
-
+# RESTART SERVER AND DB SERVER
+# pnpm run dev
+# pnpm convex dev
