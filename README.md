@@ -576,7 +576,7 @@ text": "Buy groceries", "isCompleted": true}
    3. Authentication: Configure Convex Auth (with Clerk, Auth0, or similar provider) to handle authenticating users.
    4. Form Submission Integration: Update onSubmit in app/auth/sign-up/page.tsx to dispatch a mutation to Convex.
 
-# IMPORT SAMPLE DATA INTO CONVEX
+# IMPORT SAMPLE DATA INTO CONVEX 1:47
 # pnpm dlx convex import --table tasks sampleData.jsonl
 
 # EXPOSE A DATABASE QUERY 
@@ -637,12 +637,12 @@ export default function Home() {
 }
 ```
 
-# TEST - pnpm run dev, pnpm convex dev
+# TEST - pnpm run dev, pnpm convex dev http://localhost:3000/test
+Should see tasks in app of convex, go to functions Run Function to sest output
 
 # ADDING BETTER AUTH https://better-auth.com/
 # pnpm i @convex-dev/better-auth
 # pnpm add better-auth@1.3.34 --save-exact
-
 
 # CREATE CONFIG FILE FOR CONVEX AND REGISTER IT
 # app/convex/convex.config.ts
@@ -795,6 +795,7 @@ export function ConvexClientProvider({children}: { children: ReactNode }) {
         </ConvexBetterAuthProvider>
     );
 }
+```
 # COMMENT OUT THIS LINE
 # app/auth/sign-up/page.tsx/sign-up/page.tsx
 <!-- // console.log("onsubmit called")
@@ -809,7 +810,6 @@ async function onSubmit(data: z.infer<typeof signUpSchema>) {
                 password: data.password,
         })
     } -->
-```
 
 # COMMENT OUT useForm on SignUpPage in app/auth/sign-up/page.tsx wewill use AuthClient
 ```javascript

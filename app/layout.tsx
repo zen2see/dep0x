@@ -31,6 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={cn("font-sans", inter.variable)} >
       <body className={`min-h-full flex flex-col ${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <ConvexClientProvider>  
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -38,9 +39,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <main className="max-w-7xl mx-auto w-full px-4 md:px-6 lg:px-8">
-            <ConvexClientProvider>{children}</ConvexClientProvider>
+            {children}
           </main>
         </ThemeProvider>
+      </ConvexClientProvider>
       </body>
     </html> 
   );
