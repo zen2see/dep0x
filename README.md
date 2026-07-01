@@ -564,32 +564,6 @@ _URL goext to ...cloud
 # TEST DATA
 Go to convex web and check Data to see the data 
 
-# STATUS 06/25/2026
-  The project has completed its initial UI scaffolding phase and is poised to begin backend database and authentication
-  integration.
-  A. Frontend Status (Completed)
-   * Framework Setup: Next.js 16.2.4 on React 19.2.4 with Tailwind CSS v4 and shadcn/ui.
-   * Routing & Structure:
-       * Shared main layouts (app/(shared-layout)/layout.tsx) containing the navigation bar (components/web/navbar.tsx)
-         and light/dark mode switcher (components/web/theme-toggle.tsx).
-       * Dedicated authentication route layout (app/auth/layout.tsx).
-   * Form Validation:
-       * Zod validation schema is configured in app/auth/schemas/auth.ts (validating name, email, and password).
-       * Sign-up page (app/auth/sign-up/page.tsx) uses react-hook-form with the Zod resolver.
-       * Current State: Form submission is a mock that only executes console.log("onsubmit called").
-  B. Backend Status (Pending Setup)
-   * Installation: Convex (convex@^1.37.0) is installed in devDependencies.
-   * Files: Default boilerplate files (convex/tsconfig.json and convex/README.md) are present.
-   * Database Drafts: A sample dataset file sampleData.jsonl exists in the root directory.
-   * Current State: No database schemas (convex/schema.ts), queries, mutations, or authentication mechanisms have been
-     written yet.
-  Next Steps
-   1. Sync Docs: Align AGENTS.md and README.md with CLAUDE.md to ensure any AI agent has matching context.
-   2. Schema Definition: Create convex/schema.ts to define the database tables and validation rules.
-   3. Authentication: Configure Convex Auth (with Clerk, Auth0, or similar provider) to handle authenticating users.
-   4. Form Submission Integration: Update onSubmit in app/auth/sign-up/page.tsx to dispatch a mutation to Convex.
-
-
 # EXPOSE A DATABASE QUERY AND A CONNECTION TEST
 # convex/tasks.ts 1:49
 ````javascript
@@ -607,8 +581,6 @@ export const testConnection = query({
   },
 });
 ````
-
-
 
 # CREATE A CLIENT COMPONENT FOR ConvexClientProvider
 # app/components/web/ConvexClientProvider.tsx
@@ -630,7 +602,6 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
   );
 }
 ```
-
 
 # WRAP CHILDREN OF THE BODY ELEMENT WITH THE <ConvexClientProvider> IN App/layout.tsx
 # app/layout.tsx
@@ -662,7 +633,6 @@ export default function Home() {
     )
 }
 ```
-
 # TEST - pnpm run dev, pnpm convex dev http://localhost:3000/test 
 Should see tasks in app of convex, go to functions Run Function to sest output
 
@@ -689,7 +659,6 @@ export default {
   providers: [
     getAuthConfigProvider(), 
   ],
-
 } satisfies AuthConfig;
 ```
 
@@ -716,15 +685,12 @@ import { betterAuth } from 'better-auth';
 import { createClient, type GenericCtx } from '@convex-dev/better-auth';
 import { convex } from '@convex-dev/better-auth/plugins';
 import authConfig from './auth.config';
-
 const siteURL = 
   process.env.NEXT_PUBLIC_SITE_URL ?? 
   process.env.NEXT_PUBLIC_CONVEX_SITE_URL ?? 
   'http://localhost:3000';
-
 // The component client has methods needed for integrating Convex with Better Auth.
 export const authComponent = createClient<DataModel>(components.betterAuth);
-
 export const createAuth = (ctx: GenericCtx<DataModel>) => {
     return betterAuth({
         baseURL: siteURL,
@@ -743,7 +709,6 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
         ],
     });
 };
-
 // Example function for getting the current user
 export const getCurrentUser = query({
     args: {},
@@ -808,12 +773,10 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
 }
 ```
 
-
 # UPDATE SIGN-UP PAGE
 # app/auth/sign-up/page.tsx/sign-up/page.tsx
 ```javascript
 'use client'
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 ...
 import z from "zod";
@@ -880,4 +843,95 @@ export const {
     convexSiteUrl: process.env.NEXT_PUBLIC_CONVEX_SITE_URL!,
 });
 
+```# STATUS 06/25/2026
+  The project has completed its initial UI scaffolding phase and is poised to begin backend database and authentication
+  integration.
+  A. Frontend Status (Completed)
+   * Framework Setup: Next.js 16.2.4 on React 19.2.4 with Tailwind CSS v4 and shadcn/ui.
+   * Routing & Structure:
+       * Shared main layouts (app/(shared-layout)/layout.tsx) containing the navigation bar (components/web/navbar.tsx)
+         and light/dark mode switcher (components/web/theme-toggle.tsx).
+       * Dedicated authentication route layout (app/auth/layout.tsx).
+   * Form Validation:
+       * Zod validation schema is configured in app/auth/schemas/auth.ts (validating name, email, and password).
+       * Sign-up page (app/auth/sign-up/page.tsx) uses react-hook-form with the Zod resolver.
+       * Current State: Form submission is a mock that only executes console.log("onsubmit called").
+  B. Backend Status (Pending Setup)
+   * Installation: Convex (convex@^1.37.0) is installed in devDependencies.
+   * Files: Default boilerplate files (convex/tsconfig.json and convex/README.md) are present.
+   * Database Drafts: A sample dataset file sampleData.jsonl exists in the root directory.
+   * Current State: No database schemas (convex/schema.ts), queries, mutations, or authentication mechanisms have been
+     written yet.
+  Next Steps
+   1. Sync Docs: Align AGENTS.md and README.md with CLAUDE.md to ensure any AI agent has matching context.
+   2. Schema Definition: Create convex/schema.ts to define the database tables and validation rules.
+   3. Authentication: Configure Convex Auth (with Clerk, Auth0, or similar provider) to handle authenticating users.
+   4. Form Submission Integration: Update onSubmit in app/auth/sign-up/page.tsx to dispatch a mutation to Convex.
+```
+# 2:15 AFTER GIT PUSH WITH WORKING USER SIGNUP
+
+# SHOWING UI BASED ON AUTHENTICATION STATE 
+# YOU LOGIN, REGISTER, LOGOUT WITHAUTH FCLIENT FROM BETTER AUTH
+# GET USER SESSION WITH CONVEX AUTH HOOK
+# pnpm add sonner - FOR TOAST
+# components/web/navbar.tsx
+```javascript
+"use client"
+import Link from "next/link"
+import { Button, buttonVariants } from "../ui/button"
+import { ThemeToggle } from "./theme-toggle"
+import { useConvexAuth } from "convex/react"
+import { authClient } from "@/lib/auth-client"
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
+import { SearchInput} from "./SearchInput"
+export function Navbar() {
+    const { isAuthenticated , isLoading } = useConvexAuth()
+    return (
+        <nav className="w-full py-5 flex items-center justify-between">
+            <div className="flex items-center gap-8">
+                <Link href="/">
+                    <h1 className="text-3xl font-bold">
+                        0xBytes <span className="text-blue-500">Pro</span>
+                    </h1> 
+                </Link>
+               <div className="flex items-center gap-2">
+                    <Link className={buttonVariants({variant: 'ghost'})} href="/">Home</Link>
+                    <Link className={buttonVariants({variant: 'ghost'})} href="/blog" >Blog</Link>
+                    <Link className={buttonVariants({variant: 'ghost'})} href="/create" >Create</Link>
+               </div>
+            </div> 
+            <div className="flex items-center gap-2">
+                <div className="hidden md:block mr-2">
+                    <SearchInput />
+                </div>
+               {isLoading ? null : isAuthenticated ? (
+                    <Button 
+                        onClick={() => 
+                            authClient.signOut({
+                                fetchOptions: {
+                                    onSuccess: () => {
+                                        toast.success("Logged out successfully")
+                                        router.push("/")
+                                    },
+                                    onError: (error) => {
+                                        toast.error(`Error logging out: ${error.message}`)
+                                    },
+                                },
+                            })
+                        }
+                    >   
+                        Logout
+                    </Buttton>
+                    ): (
+                        <>
+                        <Link className={buttonVariants()} href="/auth/sign-up">Sign Up</Link>
+                        <Link className={buttonVariants({ variant: "outline"})} href="/auth/login">Login</Link>
+                    </>
+                )}
+                <ThemeToggle />
+            </div>
+        </nav>
+    )      
+}
 ```
