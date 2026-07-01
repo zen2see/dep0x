@@ -6,3 +6,10 @@ export const get = query({
         return await ctx.db.query("tasks").collect();
     },
 });
+
+export const testConnection = query({
+  args: {},
+  handler: async (ctx) => {
+    return "Successfully connected to Convex!";
+  },
+});

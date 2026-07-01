@@ -1,15 +1,8 @@
 import type { AuthConfig } from 'convex/server';
-
-const siteURL = process.env.CONVEX_SITE_URL ?? process.env.SITE_URL ?? 'http://localhost:3000';
-process.env.CONVEX_SITE_URL ||= siteURL;
-
-const authConfig = {
+import { getAuthConfigProvider } from "@convex-dev/better-auth/auth-config";
+export default {
   providers: [
-    {
-      domain: siteURL,
-      applicationID: 'convex',
-    },
+    getAuthConfigProvider(), 
   ],
-} satisfies AuthConfig;
 
-export default authConfig;
+} satisfies AuthConfig;

@@ -1,9 +1,6 @@
 import { convexBetterAuthNextJs } from "@convex-dev/better-auth/nextjs";
+import { handler } from "@/lib/auth"; // Imports from your server file
 
-const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-const convexSiteUrl = process.env.CONVEX_SITE_URL ?? process.env.SITE_URL;
+export const dynamic = "force-dynamic"; // 👈 Prevents Next.js from breaking dynamic HTTP methods
 
-export const { GET, POST } = convexBetterAuthNextJs({
-  convexUrl: convexUrl ?? "",
-  convexSiteUrl: convexSiteUrl ?? "",
-});
+export const { GET, POST } = handler;
