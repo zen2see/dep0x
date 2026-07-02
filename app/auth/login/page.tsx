@@ -27,23 +27,22 @@ export default function LoginPage() {
 
   async function onSubmit(data: LoginValues) {
     try {
-      // 👈 Use try/catch with await directly for reliable async flow execution
       const response = await authClient.signIn.email({
         email: data.email,
         password: data.password,
+        callbackURL: "/?login=success", 
       });
 
-      // Better Auth returns error objects inside the resolved response data frame
+      // Show real server errors clearly
       if (response?.error) {
-        toast.error(response.error.message || "Invalid credentials");
+        const errorMessage = response.error?.message || "Invalid email or password";
+        console.error("Better Auth Server Error:", response.error);
+        toast.error(errorMessage);
         return;
       }
 
-      // If we reach here, authentication passed successfully!
-      toast.success("Logged in successfully");
-      
-      // Force immediate destination navigation
-      window.location.href = "/";
+      // ✅ Force navigate to the home page with the flag so the home page layout triggers the toast
+      window.location.href = "/?login=success";
       
     } catch (err: any) {
       console.error("Login unexpected crash:", err);
@@ -80,7 +79,6 @@ export default function LoginPage() {
                     autoComplete="username"
                     {...field} 
                   />
-                  {/* 👈 Fixed: Empty primitive tag reads error message automatically from context */}
                   {fieldState.error && <FieldError />}
                 </Field>
               )}
@@ -100,7 +98,6 @@ export default function LoginPage() {
                     autoComplete="current-password"
                     {...field} 
                   />
-                  {/* 👈 Fixed: Empty primitive tag reads error message automatically from context */}
                   {fieldState.error && <FieldError />}
                 </Field>
               )}

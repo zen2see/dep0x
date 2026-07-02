@@ -1219,3 +1219,420 @@ const { isSubmitting } = form.formState;
   }
   return (
 ```
+
+# FIXING MISING LOGGED OUT SUCCESSFULLY MESSAGES
+# ../components/web/navbar.tsx
+Bypassing fetchOptions avoids nested callbacks that are prone to dropping out.
+The callbackURL instructs the authentication client to schedule a clean destination 
+route update without forcibly cutting off ongoing state threads.Does making this
+modification to handleLogout solve the issue so that
+Removed fetchOptions: Eliminating the deep callback structure stops Next.js from 
+processing conflicting render threads.Added callbackURL: "/": This tells Better 
+Auth to take control of the redirect timeline natively instead of having JavaScript 
+sharply cut the window loading environment via a manual window.location.href rewrite. 
+```javascript
+"use client"
+import Link from "next/link"
+import { Button, buttonVariants } from "../ui/button"
+import { ThemeToggle } from "./theme-toggle"
+import { useConvexAuth } from "convex/react"
+import { authClient } from "@/lib/auth-client"
+import { toast } from "sonner"
+import { SearchInput } from "./SearchInput"
+export function Navbar() {
+    const { isAuthenticated, isLoading } = useConvexAuth()
+    const handleLogout = async () => {
+        try {
+            // 👈 Better Auth native logout wrapper
+            const response = await authClient.signOut({
+                // callbackURL forces a clean redirection while allowing the local code context to finish executing toasts
+                callbackURL: "/" 
+            });
+            if (response?.error) {
+                toast.error(response.error.message || "Failed to log out");
+                return;
+            }
+            // Shows up seamlessly on the screen now
+            toast.success("Logged out successfully");
+        } catch (error) {
+            console.error("Logout runtime error:", error);
+            toast.error("An unexpected error occurred during logout.");
+        }
+    };
+    return (
+        <nav className="w-full py-5 flex items-center justify-between">
+            <div className="flex items-center gap-8">
+                <Link href="/">
+                    <h1 className="text-3xl font-bold">
+                        0xBytes <span className="text-blue-500">Pro</span>
+                    </h1> 
+                </Link>
+               <div className="flex items-center gap-2">
+                    <Link className={buttonVariants({variant: 'ghost'})} href="/">Home</Link>
+                    <Link className={buttonVariants({variant: 'ghost'})} href="/blog" >Blog</Link>
+                    <Link className={buttonVariants({variant: 'ghost'})} href="/create" >Create</Link>
+               </div>
+            </div>
+            <div className="flex items-center gap-2">
+                <div className="hidden md:block mr-2">
+                    <SearchInput />
+                </div>
+               {isLoading ? null : isAuthenticated ? (
+                    <Button onClick={handleLogout}>   
+                        Logout
+                    </Button>    
+                ): (    
+                    <>
+                        <Link className={buttonVariants()} href="/auth/sign-up">Sign Up</Link>
+                        <Link className={buttonVariants({ variant: "outline"})} href="/auth/login">Login</Link>
+                    </>
+                )}
+                <ThemeToggle />
+            </div>
+        </nav>
+    )      
+}
+```
+# FOR LOGGED IN MESSAGE
+To make sure the "Logged in successfully" message shows up clearly on your login page before it redirects, 
+apply the exact same fix: remove window.location.href = "/" and add callbackURL: "/" directly inside your 
+signIn.email options.Just like with the logout function, window.location.href instantly wipes the browser's 
+active memory before the toast can animate into view. Using callbackURL lets Better Auth manage the timing natively.
+callbackURL: "/": This tells Better Auth to handle the route refresh safely without locking up Next.js.Removed 
+sonner toast can slide onto the screen.
+# ..auth/login/page.tsx
+```javascript
+...
+ async function onSubmit(data: LoginValues) {
+    try {
+      // 👈 Use try/catch with await directly for reliable async flow execution
+      const response = await authClient.signIn.email({
+        email: data.email,
+        password: data.password,
+        callbackURL: "/", // 👈 Better Auth native redirect parameter
+      });
+    // Better Auth returns error objects inside the resolved response data frame
+    if (response?.error) {
+        toast.error(response.error.message || "Invalid credentials", { duration: 8000 });
+        return;
+     }
+
+     // Keep the success message on screen for 6 seconds (6000ms)
+     toast.success("Logged in successfully", { duration: 6000 });
+```
+
+# ...componets/web/navbar.tsx
+```javascript
+// Inside your handleLogout function:
+if (response?.error) {
+  toast.error(response.error.message || "Failed to log out", { duration: 8000 });
+  return;
+}
+// Keep the logout success message on screen for 6 seconds
+toast.success("Logged out
+``` successfully", { duration: 6000 });
+Use code with caution.
+```
+
+# LOGIN SUCCESSFULL MESSAGE CUTS OFF BECAUSE PAGE REFRESH FIXED BY:
+# TRIGGERING ON THE HOME PAGE AFTER THE REDIRECT LANDS
+# Include a tiny query flag (?login=success). This passes a lightweight message to the next page.
+# ../auth/login/page.tsx
+```javascript
+...
+// callbackURL: "/", // 👈 Better Auth native redirect parameter
+    callbackURL: "/?login=success", // 👈 Just append this query parameter
+  });
+   // toast.success("Logged in successfully", { duration: 6000 });
+...
+```
+
+# ON HOMEPAGE dropt useEffect , it listens for the URL flag, fires the toast and cleans it up.
+Open your home page file and replace or update it with this component. Notice the clean Suspense 
+wrapper—this is a strict Next.js requirement when using useSearchParams to prevent the build system 
+from breaking or dropping client-side hooks:tsx
+# ..(shared-layout)/page.tsx
+```javascript
+"use client";
+import Image from "next/image"
+import Link from "next/link"
+import { useEffect, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { toast } from "sonner";
+// 1. Create a sub-component that safely hooks into the URL parameters
+ function AuthToastListener() {
+ const searchParams = useSearchParams();
+ const router = useRouter();
+ useEffect(() => {
+    const loginStatus = searchParams.get("login");
+    const signupStatus = searchParams.get("signup");
+    if (loginStatus === "success") {
+      toast.success("Logged in successfully");
+      router.replace("/"); // Cleans the URL parameter immediately
+    }
+    if (signupStatus === "success") {
+      toast.success("Account created successfully!");
+      router.replace("/"); // Cleans the URL parameter immediately
+    }
+  }, [searchParams, router]);
+  return null; // This component doesn't render HTML, it just listens
+}
+ // 2. Your actual main landing home page component
+export default function HomePage() {
+  return (
+    <div className="p-8 space-y-4">
+      {/* 👈 Next.js requires useSearchParams to be wrapped in Suspense */}
+      <Suspense fallback={null}>
+        <AuthToastListener />
+      </Suspense> 
+      <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+        <h1>page.tsx</h1>
+      </div>
+    </div>  
+  );
+}
+
+
+
+}
+```
+# ALSO FOR SIGN-UP PAGE
+# ../authsign-up/page.tsx
+```javascript
+'use client'
+import { authClient } from "@/lib/auth-client";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm, Controller } from "react-hook-form";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { loginSchema } from "@/app/schemas/auth";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation"; // 👈 Re-introduced for soft routing execution
+import { z } from "zod";
+type LoginValues = z.infer<typeof loginSchema>;
+export default function LoginPage() {
+  const router = useRouter(); // 👈 Initialize the Next.js router
+
+  const form = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+  const { isSubmitting } = form.formState;
+  async function onSubmit(data: LoginValues) {
+    try {
+      // 👈 Await the response from Better Auth
+      const response = await authClient.signIn.email({
+        email: data.email,
+        password: data.password,
+      });
+      // Catch error fields inside the response block
+      if (response?.error) {
+        toast.error(response.error.message || "Invalid credentials");
+        return;
+      }
+      // ✅ Step 1: Fire the success notification immediately!
+      toast.success("Logged in successfully");
+      // ✅ Step 2: Use client routing with a slight pause so the toast registers
+      setTimeout(() => {
+        router.push("/");
+        router.refresh(); // Tells the application layout to look for new cookies
+      }, 1000);
+    } catch (err: any) {
+      console.error("Login execution crash:", err);
+      toast.error("Something went wrong during sign in.");
+    }
+  }
+  return (
+    <Card className="mx-auto w-full max-w-md">
+      <CardHeader>
+        <CardTitle>Login</CardTitle>
+        <CardDescription>Login to get started.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form 
+          onSubmit={form.handleSubmit(onSubmit, (errors) => {
+            console.log("Validation Errors:", errors);
+            toast.error("Please fill out the form requirements correctly.");
+          })}
+        >
+          <FieldGroup className="gap-y-4">
+            {/* Email Field */}
+            <Controller 
+              name="email" 
+              control={form.control} 
+              render={({ field, fieldState }) => (
+                <Field>
+                  <FieldLabel>Email</FieldLabel>
+                  <Input 
+                    aria-invalid={fieldState.invalid}
+                    placeholder="john@example.com" 
+                    type="email" 
+                    autoComplete="username"
+                    {...field} 
+                  />
+                  {fieldState.error && <FieldError />}
+                </Field>
+              )}
+            />  
+            {/* Password Field */}
+            <Controller 
+              name="password" 
+              control={form.control} 
+              render={({ field, fieldState }) => (
+                <Field>
+                  <FieldLabel>Password</FieldLabel>
+                  <Input 
+                    aria-invalid={fieldState.invalid}
+                    placeholder="••••••••" 
+                    type="password" 
+                    autoComplete="current-password"
+                    {...field} 
+                  />
+                  {fieldState.error && <FieldError />}
+                </Field>
+              )}
+            />
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Logging in..." : "Login"}
+            </Button>     
+          </FieldGroup>
+        </form>
+      </CardContent>  
+    </Card>
+  )
+}
+
+```
+# FIXING SIGN-UP PAGE
+```javascript
+'use client'
+import { authClient } from "@/lib/auth-client";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm, Controller } from "react-hook-form";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { loginSchema } from "@/app/schemas/auth";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation"; // 👈 Re-introduced for soft routing execution
+import { z } from "zod";
+type LoginValues = z.infer<typeof signUpSchema>;
+export default function SignUpPage() {
+  const router = useRouter(); // 👈 Initialize the Next.js router
+  const form = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      name: "",
+      password: "",
+    },
+  });
+  const { isSubmitting } = form.formState;
+  async function onSubmit(data: LoginValues) {
+    try {
+      // 👈 Await the response from Better Auth
+      const response = await authClient.signIn.email({
+        email: data.email,
+        password: data.password,
+      });
+
+      // Catch error fields inside the response block
+      if (response?.error) {
+        toast.error(response.error.message || "Invalid credentials");
+        return;
+      }
+
+      // ✅ Step 1: Fire the success notification immediately!
+      toast.success("Logged in successfully");
+      
+      // ✅ Step 2: Use client routing with a slight pause so the toast registers
+      setTimeout(() => {
+        router.push("/");
+        router.refresh(); // Tells the application layout to look for new cookies
+      }, 1000);
+      
+    } catch (err: any) {
+      console.error("Login execution crash:", err);
+      toast.error("Something went wrong during sign in.");
+    }
+  }
+
+  return (
+    <Card className="mx-auto w-full max-w-md">
+      <CardHeader>
+        <CardTitle>Sign up</CardTitle>
+        <CardDescription>Create an account to get started.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form 
+          onSubmit={form.handleSubmit(onSubmit, (errors) => {
+            console.log("Validation Errors:", errors);
+            toast.error("Please fill out the form requirements correctly.");
+          })}
+        >
+          <FieldGroup>
+          {/* Name Field */}
+            <Controller 
+              name="name"
+              control={form.control}
+              render={({field, fieldState}) => (
+                <Field>
+                  <FieldLabel>Full Name</FieldLabel>
+                  <Input placeholder="John doe" {...field} />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            /> 
+            <Controller 
+              name="email" 
+              control={form.control} 
+              render={({ field, fieldState }) => (
+                <Field>
+                  <FieldLabel>Email</FieldLabel>
+                  <Input 
+                    aria-invalid={fieldState.invalid}
+                    placeholder="john@example.com" 
+                    type="email" 
+                    autoComplete="username"
+                    {...field} 
+                  />
+                  {fieldState.error && <FieldError />}
+                </Field>
+              )}
+            />
+             {/* Password Field */}
+            <Controller 
+              name="password" 
+              control={form.control} 
+              render={({ field, fieldState }) => (
+                <Field>
+                  <FieldLabel>Password</FieldLabel>
+                  <Input 
+                    aria-invalid={fieldState.invalid}
+                    placeholder="••••••••" 
+                    type="password" 
+                    autoComplete="current-password"
+                    {...field} 
+                  />
+                  {fieldState.error && <FieldError />}
+                </Field>
+              )}
+            />  
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Logging in..." : "Login"}
+            </Button>      
+          </FieldGroup>
+        </form>
+      </CardContent>  
+    </Card>
+  )
+}
+```
