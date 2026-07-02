@@ -8,10 +8,15 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
-import z from "zod";
+import { z } from "zod";
+import { useRouter } from "next/navigation" 
+import { toast } from "sonner";
+
+type SignUpValues = z.infer<typeof signUpSchema>;
 
 export default function SignUpPage() {
-    const form = useForm({
+    const router = useRouter()
+    const form = useForm<SignUpValues>({
         resolver: zodResolver(signUpSchema),
         defaultValues: {
             name: "",
@@ -20,12 +25,27 @@ export default function SignUpPage() {
         },
     });
 
-    async function onSubmit(data: z.infer<typeof signUpSchema>) {
+    const { isSubmitting } = form.formState;
+
+    async function onSubmit(data: SignUpValues) {
         await authClient.signUp.email({
-                email: data.email,
-                name: data.name,
-                password: data.password,
-        })
+            email: data.email,
+            name: data.name,
+            password: data.password,
+        }, { // Fixed nested configuration block structure
+            fetchOptions: {
+                onSuccess: () => {
+                    toast.success("Account created successfully");
+                    // 👈 Micro-delay added so Next.js doesn't destroy the toast instantly
+                    setTimeout(() => {
+                        router.push("/");
+                    }, 300);
+                },
+                onError: (ctx) => {
+                    toast.error(ctx.error.message || "Something went wrong");
+                },
+            }
+        });
     }
     return (
         <Card>
@@ -60,7 +80,7 @@ export default function SignUpPage() {
                                 <Field>
                                    <FieldLabel>Email</FieldLabel>
                                    <Input aria-invalid={fieldState.invalid}
-                                   placeholder="John@Doe.com" type="email" {...field} />
+                                   placeholder="John@Doe.com" type="email" autoComplete="username" {...field} />
                                    {fieldState.invalid && (
                                     <FieldError errors={[fieldState.error]} />  
                                    )}
@@ -73,7 +93,7 @@ export default function SignUpPage() {
                             render={({ field, fieldState })  => (
                                 <Field>
                                    <FieldLabel>Password</FieldLabel>
-                                   <Input placeholder="*****" type="password" {...field} />
+                                   <Input placeholder="*****" type="password"  autoComplete="new-password" {...field} />
                                    {fieldState.invalid && (
                                     <FieldError errors={[fieldState.error]} />  
                                    )}

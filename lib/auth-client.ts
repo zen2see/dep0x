@@ -1,9 +1,14 @@
-import { createAuthClient } from "better-auth/react";
-import { convexClient } from "@convex-dev/better-auth/client/plugins";
+// import { createAuthClient } from "better-auth/react";
+// import { convexClient } from "@convex-dev/better-auth/client/plugins";
+
+// export const authClient = createAuthClient({
+//   baseURL: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+//   plugins: [
+//     convexClient() // 👈 Tells Better Auth to route data directly via Convex mutations
+//   ]
+// });
+import { createAuthClient } from "better-auth/react"
 
 export const authClient = createAuthClient({
-  baseURL: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-  plugins: [
-    convexClient() // 👈 Tells Better Auth to route data directly via Convex mutations
-  ]
-});
+    baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000" // 👈 CRITICAL: Must match your exact working URL
+})
