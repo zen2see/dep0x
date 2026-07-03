@@ -7,17 +7,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { loginSchema } from "@/app/schemas/auth";
+import { signUpSchema } from "@/app/schemas/auth";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation"; // 👈 Re-introduced for soft routing execution
 import { z } from "zod";
 
-type LoginValues = z.infer<typeof signUpSchema>;
+type SignUpValues = z.infer<typeof signUpSchema>;
 
 export default function SignUpPage() {
   const router = useRouter(); // 👈 Initialize the Next.js router
-  const form = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<SignUpValues>({
+    resolver: zodResolver(signUpSchema),
     defaultValues: {
       email: "",
       name: "",
@@ -25,22 +25,23 @@ export default function SignUpPage() {
     },
   });
   const { isSubmitting } = form.formState;
-  async function onSubmit(data: LoginValues) {
+  async function onSubmit(data: signUpValues) {
     try {
       // 👈 Await the response from Better Auth
-      const response = await authClient.signIn.email({
+      const response = await authClient.signUp.email({
         email: data.email,
         password: data.password,
+        name: data.name, // 👈 Explicitly pass the name field here
       });
 
       // Catch error fields inside the response block
-      if (response?.error) {
-        toast.error(response.error.message || "Invalid credentials");
+          if (response?.error) {
+        toast.error(response.error.message || "Registration failed");
         return;
       }
 
       // ✅ Step 1: Fire the success notification immediately!
-      toast.success("Logged in successfully");
+      toast.success("Account created successfully");
       
       // ✅ Step 2: Use client routing with a slight pause so the toast registers
       setTimeout(() => {

@@ -429,85 +429,135 @@ export const loginSchema = z.object({
 # app/auth/sign-up/page.tsx
 ```javascript
 'use client'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Controller, useForm } from "react-hook-form";
-import { signUpSchema } from "../schemas/auth";
+
+import { authClient } from "@/lib/auth-client";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm, Controller } from "react-hook-form";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { signUpSchema } from "@/app/schemas/auth";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation"; // 👈 Re-introduced for soft routing execution
+import { z } from "zod";
+
+type SignUpValues = z.infer<typeof signUpSchema>;
+
 export default function SignUpPage() {
-    const form = useForm({
-        resolver: zodResolver(signUpSchema),
-        defaultValues: {
-            email: "",
-            name: "",
-            password: "",
-        },
-    })
-    function onSubmit() {
-        console.log("onsubmit called")
+  const router = useRouter(); // 👈 Initialize the Next.js router
+  const form = useForm<SignUpValues>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: {
+      email: "",
+      name: "",
+      password: "",
+    },
+  });
+  const { isSubmitting } = form.formState;
+  async function onSubmit(data: signUpValues) {
+    try {
+      // 👈 Await the response from Better Auth
+      const response = await authClient.signUp.email({
+        email: data.email,
+        password: data.password,
+        name: data.name, // 👈 Explicitly pass the name field here
+      });
+
+      // Catch error fields inside the response block
+          if (response?.error) {
+        toast.error(response.error.message || "Registration failed");
+        return;
+      }
+
+      // ✅ Step 1: Fire the success notification immediately!
+      toast.success("Account created successfully");
+      
+      // ✅ Step 2: Use client routing with a slight pause so the toast registers
+      setTimeout(() => {
+        router.push("/");
+        router.refresh(); // Tells the application layout to look for new cookies
+      }, 1000);
+      
+    } catch (err: any) {
+      console.error("Login execution crash:", err);
+      toast.error("Something went wrong during sign in.");
     }
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Sign Up</CardTitle>
-                <CardDescription>Create an account to get started.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
-                    <FieldGroup className="gap-y-4">
-                        <Controller 
-                            name="name" 
-                            control={form.control} 
-                            render={({ field, fieldState }) => (
-                                <Field>
-                                   <FieldLabel>Full Name</FieldLabel>
-                                   <Input
-                                     aria-invalid={fieldState.invalid}
-                                     placeholder="John Doe"
-                                     {...field}
-                                   />
-                                   {fieldState.invalid && (
-                                    <FieldError errors={[fieldState.error]} />  
-                                   )}
-                                </Field>
-                           )}
-                        />
-                        <Controller 
-                            name="email" 
-                            control={form.control} 
-                            render={({ field, fieldState })  => (
-                                <Field>
-                                   <FieldLabel>Email</FieldLabel>
-                                   <Input aria-invalid={fieldState.invalid}
-                                   placeholder="John@Doe.com" type="email" {...field} />
-                                   {fieldState.invalid && (
-                                    <FieldError errors={[fieldState.error]} />  
-                                   )}
-                                </Field>
-                           )}
-                        />  
-                        <Controller 
-                            name="password" 
-                            control={form.control} 
-                            render={({ field, fieldState })  => (
-                                <Field>
-                                   <FieldLabel>Password</FieldLabel>
-                                   <Input placeholder="*****" type="password" {...field} />
-                                   {fieldState.invalid && (
-                                    <FieldError errors={[fieldState.error]} />  
-                                   )}
-                                </Field>
-                           )}
-                        />
-                        <Button type="submit">Sign up</Button>     
-                    </FieldGroup>
-                </form>
-            </CardContent>  
-        </Card>
-    )
+  }
+
+  return (
+    <Card className="mx-auto w-full max-w-md">
+      <CardHeader>
+        <CardTitle>Sign up</CardTitle>
+        <CardDescription>Create an account to get started.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form 
+          onSubmit={form.handleSubmit(onSubmit, (errors) => {
+            console.log("Validation Errors:", errors);
+            toast.error("Please fill out the form requirements correctly.");
+          })}
+        >
+          <FieldGroup>
+          {/* Name Field */}
+            <Controller 
+              name="name"
+              control={form.control}
+              render={({field, fieldState}) => (
+                <Field>
+                  <FieldLabel>Full Name</FieldLabel>
+                  <Input placeholder="John doe" {...field} />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            /> 
+            <Controller 
+              name="email" 
+              control={form.control} 
+              render={({ field, fieldState }) => (
+                <Field>
+                  <FieldLabel>Email</FieldLabel>
+                  <Input 
+                    aria-invalid={fieldState.invalid}
+                    placeholder="john@example.com" 
+                    type="email" 
+                    autoComplete="username"
+                    {...field} 
+                  />
+                  {fieldState.error && <FieldError />}
+                </Field>
+              )}
+            />
+             {/* Password Field */}
+            <Controller 
+              name="password" 
+              control={form.control} 
+              render={({ field, fieldState }) => (
+                <Field>
+                  <FieldLabel>Password</FieldLabel>
+                  <Input 
+                    aria-invalid={fieldState.invalid}
+                    placeholder="••••••••" 
+                    type="password" 
+                    autoComplete="current-password"
+                    {...field} 
+                  />
+                  {fieldState.error && <FieldError />}
+                </Field>
+              )}
+            />  
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Logging in..." : "Login"}
+            </Button>      
+          </FieldGroup>
+        </form>
+      </CardContent>  
+    </Card>
+  )
 }
+
 ```
 
 # CREATE LAYOUT FILE FOR AUTH FOLDER
@@ -794,25 +844,25 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
 # app/auth/sign-up/page.tsx/sign-up/page.tsx
 ```javascript
 'use client'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+import { authClient } from "@/lib/auth-client";
 ...
-import z from "zod";
+
+type SignUpValues = z.infer<typeof signUpSchema>;
+
 export default function SignUpPage() {
-    const form = useForm({
-        // resolver: zodResolver(signUpSchema),
-        defaultValues: {
-            name: "",
-            email: "",
-            password: "",
-        },
-    });
-    async function onSubmit(data: z.infer<typeof signUpSchema>) {
-        await authClient.signUp.email({
-                email: data.email,
-                name: data.name,
-                password: data.password,
-        })
-    }
+  const router = useRouter(); // 👈 Initialize the Next.js router
+  const form = useForm<SignUpValues>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: {
+      email: "",
+      name: "",
+      password: "",
+    },
+  });
+  const { isSubmitting } = form.formState;
+  async function onSubmit(data: signUpValues) {
+    try {
 ...
 ```
 
@@ -1511,11 +1561,11 @@ export default function LoginPage() {
 # FIXING SIGN-UP PAGE
 ```javascript
 ...
-type LoginValues = z.infer<typeof signUpSchema>;
+ype SignUpValues = z.infer<typeof signUpSchema>;
 export default function SignUpPage() {
   const router = useRouter(); // 👈 Initialize the Next.js router
-  const form = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<SignUpValues>({
+    resolver: zodResolver(signUpSchema),
     defaultValues: {
       email: "",
       name: "",
@@ -1523,62 +1573,46 @@ export default function SignUpPage() {
     },
   });
   const { isSubmitting } = form.formState;
-  async function onSubmit(data: LoginValues) {
+  async function onSubmit(data: signUpValues) {
     try {
       // 👈 Await the response from Better Auth
-      const response = await authClient.signIn.email({
+      const response = await authClient.signUp.email({
         email: data.email,
         password: data.password,
+        name: data.name, // 👈 Explicitly pass the name field here
       });
       // Catch error fields inside the response block
-      if (response?.error) {
-        toast.error(response.error.message || "Invalid credentials");
+          if (response?.error) {
+        toast.error(response.error.message || "Registration failed");
         return;
       }
-
       // ✅ Step 1: Fire the success notification immediately!
-      toast.success("Logged in successfully");
-      
+      toast.success("Account created successfully");
       // ✅ Step 2: Use client routing with a slight pause so the toast registers
       setTimeout(() => {
         router.push("/");
         router.refresh(); // Tells the application layout to look for new cookies
       }, 1000);
-      
     } catch (err: any) {
       console.error("Login execution crash:", err);
       toast.error("Something went wrong during sign in.");
     }
   }
-  return (
-    <Card className="mx-auto w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Sign up</CardTitle>
-        <CardDescription>Create an account to get started.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form 
-          onSubmit={form.handleSubmit(onSubmit, (errors) => {
-            console.log("Validation Errors:", errors);
-            toast.error("Please fill out the form requirements correctly.");
-          })}
-        >
-          <FieldGroup>
-          {/* Name Field */}
-            <Controller 
-              name="name"
-              control={form.control}
-              render={({field, fieldState}) => (
-                <Field>
-                  <FieldLabel>Full Name</FieldLabel>
-                  <Input placeholder="John doe" {...field} />
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
-                </Field>
-              )}
-            /> 
-            <Controller 
 ...
 ```
 
+# ADD useTransiton React Hook that lets you render a part of the UIin the bkgrd
+# app/auth/login/page.tsx
+...
+import { useTransiton } from "react";
+...
+export default function LoginPage() {
+  const [isPending, startTransition] = useTransiton();
+
+ function onSubmit(data: LoginValues) {
+    try {
+      startTransiton(async () => {
+        
+
+# START WORKING ON THE CREATE ROUTE
+# app/(shared-layout)/create/page.tsx
