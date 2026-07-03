@@ -1614,5 +1614,157 @@ export default function LoginPage() {
       startTransiton(async () => {
         
 
-# START WORKING ON THE CREATE ROUTE
+# START WORKING ON THE CREATE ROUTE 2:36
 # app/(shared-layout)/create/page.tsx
+```javascript
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+export default function CreateRoute() {
+  return (
+    <div className="py-12">
+      <div className="text-center mb-12">
+			  <h1 className="text-4xl font-extrabold tracking-tigt sm:text-5xl">
+          Create Post
+        </h1>
+        <p className="text-xl text-muted-foreground pt-4">
+          Share your thoughts with the big world
+        </p>
+      </div>
+      <Card className="w-full max-w-xl mx-auto">
+        <CardHeader>
+          <CardTitle>Create Blog Article</CardTitle>
+          <CardDescription>Create a new blog article</CardDescription>
+        </CardHeader> 
+        <CardContent>
+          <form>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+```
+# CREATE A NEW SCHEMA FOR THE FORMIN CREATE 2:42
+# app/schemas/blog.ts
+```javascript
+import z from 'zod'
+export const postSchema = z.object({
+    title: z.string().min(3).max(50),
+    content: z.string().min(10).max(1000), 
+    image:  z.instanceof(File),
+});
+
+```
+
+
+# HAD TO FIX theme-provider error
+```javascript
+../components/ui/theme-provider.tsx
+"use client";
+import * as React from "react";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
+// export function ThemeProvider({
+//   children,
+//   ...props
+// }: React.ComponentProps<typeof NextThemesProvider>) {
+//   return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
+// }
+export function ThemeProvider({
+  children,
+  ...props
+}: React.ComponentProps<typeof NextThemesProvider>) {
+  // React 19 fix: Suppress the <script> tag warning on the client side
+  const scriptProps = typeof window === "undefined" 
+    ? undefined 
+    : ({ type: "application/json" } as const);
+  return (
+    <NextThemesProvider {...props} scriptProps={scriptProps}>
+      {children}
+    </NextThemesProvider>
+  );
+}
+```
+
+
+# INITIALIZE USEFORM HOOK - READY TO MAKE CREATE BUTTON 2:48
+# pnpm dlx shadcn@latest add textarea
+# app/(shared-layout)/create/page.tsx
+```javascript
+"use client"
+import { Field, FieldError, FieldGroup, FieldLabel,} from "@/components/ui/field";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm, Controller } from "react-hook-form"
+import { postSchema } from "@/app/schemas/blog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+export default function CreateRoute() {
+  const form = useForm({
+    resolver: zodResolver(postSchema),
+    defaultValues: {
+      content: "",
+      title: "",
+    },
+  });
+  return (
+    <div className="py-12">
+      <div className="text-center mb-12">
+			  <h1 className="text-4xl font-extrabold tracking-tigt sm:text-5xl">
+          Create Post
+        </h1>
+        <p className="text-xl text-muted-foreground pt-4">
+          Share your thoughts with the big world
+        </p>
+      </div>
+      <Card className="w-full max-w-xl mx-auto">
+        <CardHeader>
+          <CardTitle>Create Blog Article</CardTitle>
+          <CardDescription>Create a new blog article</CardDescription>
+        </CardHeader> 
+        <CardContent>
+          <form  >
+            <FieldGroup className="gap-y-4">
+                 <Controller
+                   name="title"
+                   control={form.control}
+                   render={({ field, fieldState }) => (
+                    <Field>
+                      <FieldLabel>title</FieldLabel>
+                        <Input 
+                            aria-invalid={fieldState.invalid}
+                            placeholder="super cool title" 
+                            {...field} 
+                        />
+                        {fieldState.invalid && (
+                          <FieldError errors={[fieldState.error]} />
+                        )}
+                    </Field>
+                  )}
+                 />
+                 <Controller
+                   name="content"
+                   control={form.control}
+                   render={({ field, fieldState }) => (
+                    <Field>
+                      <FieldLabel>Content</FieldLabel>
+                        <Textarea
+                            aria-invalid={fieldState.invalid}
+                            placeholder="super cool blog content" 
+                            {...field} 
+                        />
+                        {fieldState.invalid && (
+  <FieldError errors=     {[fieldState.error?.message ?? "Invalid field"]} />
+                        )}
+                    </Field>
+                  )}
+                />
+            </FieldGroup>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+```
+
+
+
