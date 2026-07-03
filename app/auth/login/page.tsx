@@ -109,7 +109,7 @@ export default function LoginPage() {
 
           </FieldGroup>
         </form>
-      </CardContent>  
-    </Card>
+      </CardContent>   
+    </Card>            
   )
 }
