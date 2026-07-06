@@ -1643,8 +1643,9 @@ export default function CreateRoute() {
   )
 }
 ```
-# CREATE A NEW SCHEMA FOR THE FORMIN CREATE 2:42
-# app/schemas/blog.ts
+
+# CREATE A NEW SCHEMA FOR THE CREATE 2:42
+# app/convex/schemas/blog.ts
 ```javascript
 import z from 'zod'
 export const postSchema = z.object({
@@ -1655,10 +1656,9 @@ export const postSchema = z.object({
 
 ```
 
-
 # HAD TO FIX theme-provider error
+# ../components/ui/theme-provider.tsx
 ```javascript
-../components/ui/theme-provider.tsx
 "use client";
 import * as React from "react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
@@ -1684,31 +1684,49 @@ export function ThemeProvider({
 }
 ```
 
-
-# INITIALIZE USEFORM HOOK - READY TO MAKE CREATE BUTTON 2:48
+# INITIALIZE USEFORM HOOK - READY TO MAKE ADD CREATE POST BUTTON 2:48
 # pnpm dlx shadcn@latest add textarea
 # app/(shared-layout)/create/page.tsx
 ```javascript
 "use client"
-import { Field, FieldError, FieldGroup, FieldLabel,} from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, Controller } from "react-hook-form"
-import { postSchema } from "@/app/schemas/blog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { postSchema } from "@/app/schemas/blog"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
+import { api } from "@/convex/_generated/api"
+import { useMutation } from "convex/react"; // 👈 Added missing hook import
+import { z } from "zod"; // 👈 Added missing zod import
+type PostFormValues = z.infer<typeof postSchema>; // 👈 Extracted clean type helper
 export default function CreateRoute() {
-  const form = useForm({
+  const mutation = useMutation(api.posts.createPosts)
+  const form = useForm<PostFormValues>({ // 👈 Added explicit type generic
     resolver: zodResolver(postSchema),
     defaultValues: {
       content: "",
       title: "",
     },
   });
+  const { isSubmitting } = form.formState;
+  // 👈 Added async/await to handle the database insertion lifecycle safely
+  async function onSubmit(values: PostFormValues) {
+    try {
+      await mutation({
+        title: values.title,
+        body: values.content, // Make sure your Convex schema expects 'body' and not 'content'
+      });
+      form.reset(); // Clear the form after a successful post
+    } catch (error) {
+      console.error("Failed to create post:", error);
+    }
+  }
   return (
     <div className="py-12">
       <div className="text-center mb-12">
-			  <h1 className="text-4xl font-extrabold tracking-tigt sm:text-5xl">
+        <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl"> {/* 👈 Fixed tracking-tigt typo */}
           Create Post
         </h1>
         <p className="text-xl text-muted-foreground pt-4">
@@ -1721,42 +1739,47 @@ export default function CreateRoute() {
           <CardDescription>Create a new blog article</CardDescription>
         </CardHeader> 
         <CardContent>
-          <form  >
+          {/* 👈 Hooked up the onSubmit handler to react-hook-form */}
+          <form onSubmit={form.handleSubmit(onSubmit)}>
             <FieldGroup className="gap-y-4">
-                 <Controller
-                   name="title"
-                   control={form.control}
-                   render={({ field, fieldState }) => (
-                    <Field>
-                      <FieldLabel>title</FieldLabel>
-                        <Input 
-                            aria-invalid={fieldState.invalid}
-                            placeholder="super cool title" 
-                            {...field} 
-                        />
-                        {fieldState.invalid && (
-                          <FieldError errors={[fieldState.error]} />
-                        )}
-                    </Field>
-                  )}
-                 />
-                 <Controller
-                   name="content"
-                   control={form.control}
-                   render={({ field, fieldState }) => (
-                    <Field>
-                      <FieldLabel>Content</FieldLabel>
-                        <Textarea
-                            aria-invalid={fieldState.invalid}
-                            placeholder="super cool blog content" 
-                            {...field} 
-                        />
-                        {fieldState.invalid && (
-  <FieldError errors=     {[fieldState.error?.message ?? "Invalid field"]} />
-                        )}
-                    </Field>
-                  )}
-                />
+              <Controller
+                name="title"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel>Title</FieldLabel>
+                    <Input 
+                      aria-invalid={fieldState.invalid}
+                      placeholder="super cool title" 
+                      {...field} 
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+              <Controller
+                name="content"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel>Content</FieldLabel>
+                    <Textarea
+                      aria-invalid={fieldState.invalid}
+                      placeholder="super cool blog content" 
+                      {...field} 
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+              {/* 👈 Added dynamic button states for safety during submission */}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Creating..." : "Create Post"}
+              </Button>
             </FieldGroup>
           </form>
         </CardContent>
@@ -1766,5 +1789,63 @@ export default function CreateRoute() {
 }
 ```
 
+# CREATE POSTS BUTTON 2:48
+# app/(shared-layout)/crete/page.tsx
+```javascript
+import { Button } from "@/components/ui/button";
+...
+ {/* 👈 Added dynamic button states for safety during submission */}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Creating..." : "Create Post"}
+              </Button>
+```
+# CREATE SCHEMA FOR POSTS BUTTON :53
+# ../convex/schema.ts
+```javascript
+import { defineSchema, defineTable } from "convex/server"
+import { v } from "convex/values"
+export default defineSchema({
+    posts: defineTable({
+        title: v.string(),
+        body: v.string(),
+        authorId: v.string(),
+    })
+})
+```
+# DELETE TASKS FROM CONVEX TABELS (ON WEBSITE)
 
+# CREATE POSTS.TS
+# ../convex/posts.ts
+```javascript
+import { mutation } from "_generated/server";
+import { v } from "convex/values";
+// Create a new task with the given text
+export const createPost = mutation({
+    args: {
+        title: v.string(),
+        body: v.string(),
+    },  
+    handler: async (ctx, args) => {
+        const user = await authComponent.safeGetAuthUser(ctx);
+        if (!user) {
+            throw new ConvexError("User not authenticated");
+        }
+        const blogArticle = await ctx.db.insert("posts", {
+                title: args.title,
+                body: args.body,
+                authorId: user._id,
+        });
+        return blogArticle;
+    },
+})
+```
 
+# ADD CreateRoute() - A GET REQUEST
+# app/(shared-layout)/create/page.tsx
+```javascript
+...
+export default function CreateRoute() {
+  const mutation = useMutation(api.posts.createPosts)
+  const form = useForm({
+...
+```
