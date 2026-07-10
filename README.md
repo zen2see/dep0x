@@ -1857,7 +1857,6 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
 # ../app/(shared-layout)/create/page.tsx
 ```javascript
 "use client";
-
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -1875,10 +1874,7 @@ import { useTransition } from "react";  // Import useTransition from React
 import { Loader2 } from "lucide-react"; // Import the Loader2 icon from lucide-react
 import { toast } from "sonner";// Import the toast function from sonner
 import { useRouter } from "next/navigation"; // Import useRouter from next/navigation
-
-
 type PostFormValues = z.infer<typeof postSchema>;
-
 export default function CreateRoute() {
   const mutation = useMutation(api.posts.createPost);
   const router = useRouter();
@@ -1886,7 +1882,6 @@ export default function CreateRoute() {
   const { data: session } = authClient.useSession();
   const { isAuthenticated } = useConvexAuth();
   const [isPending, startTransition] = useTransition(); // Initialize useTransition
-
   // 👈 Wrap this in a useEffect so it only prints ONCE when the status changes
   useEffect(() => {
     console.log("--- SYSTEM AUTH STATUS ---");
@@ -1902,13 +1897,10 @@ export default function CreateRoute() {
       image: undefined,
     },
   });
-
   const { isSubmitting } = form.formState;
-
    // Combine Hook Form's submission tracking with Next.js's 
    // transition router tracking
   const isLoading = isSubmitting || isPending;
-
   async function onSubmit(values: PostFormValues) {
     console.log("Form passed validation! Sending data to Convex...", values);
     try {
@@ -1932,7 +1924,6 @@ export default function CreateRoute() {
       alert("Error: Look at your browser console to see the backend message!");
     } 
   }
-
   return (
     <div className="py-12">
       <div className="text-center mb-12">
@@ -2017,3 +2008,442 @@ export default function CreateRoute() {
 ```
 Correct Async Sequence: The code now blocks on await mutation(...) before entering the route transition block. This prevents asynchronous race conditions between the application state changes and database state writes.Aggregated Loading States: Combined isSubmitting and isPending into a single isLoading value. The spinner icon stays running while Next.js fetches data for the index page route.Replaced alert(): Swapped the harsh browser popup alert out for clean, non-blocking toast.error messages inside both error catch conditions.Strict Controlled Forms: Connected explicit <Controller /> hooks for the input and text area properties mapped to match your schema setup.
 
+# CREATED A PROTECED WRAPPER 
+# app/components/protected-router.tsx
+```javascript
+"use client";
+import { authClient } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
+export function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const router = useRouter();
+  const { data: session, isPending: isAuthLoading } = authClient.useSession();
+  useEffect(() => {
+    // Correct absolute public routing target path string 
+    if (!isAuthLoading && !session) {
+      toast.error("Please sign in to access this page.");
+      router.push("/auth/login"); 
+    }
+  }, [session, isAuthLoading, router]);
+  // Render a global loading skeleton while evaluating auth tokens
+  if (isAuthLoading) {
+    return (
+      <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-y-2">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground animate-pulse">
+          Verifying security credentials...
+        </p>
+      </div>
+    );
+  }
+  // Prevent secret children from building or flashing layout elements
+  if (!session) return null;
+  return <>{children}</>;
+}
+```
+# WRAP CREATE ROUTE
+# app/(shared-layout)/Create/page.tsx
+```javascript
+...
+import { Loader2 } from "lucide-react"; // Import the Loader2 icon from lucide-react
+import { toast } from "sonner";// Import the toast function from sonner
+import { useRouter } from "next/navigation"; // Import useRouter from next/navigation
+import { ProtectedRoute } from "@/components/authwrapper/protected-route";
+type PostFormValues = z.infer<typeof postSchema>;
+export default function CreateRoute() {
+  const mutation = useMutation(api.posts.createPost);
+  const router = useRouter();
+  //const { data: session, isPending: isAuthLoading } = authClient.useSession();
+  // const { isAuthenticated } = useConvexAuth();
+  // const [isPending, startTransition] = useTransition(); // Initialize useTransition
+ const [isPending, startTransition] = useTransition(); 
+  // ✅ 2. Handle unauthorized protection redirection
+  //useEffect(() => {
+    // Wait until Better Auth finishes checking the cookie session status first
+  //   if (!isAuthLoading && !session) {
+  //     toast.error("Please sign in to access this page.");
+  //     router.push("/auth/login"); // 👈 Redirect to your auth or login screen
+  //   }
+  // }, [session, isAuthLoading, router]);
+
+  // // ✅ 3. Prevent rendering the form layout if authentication is missing or checking
+  // if (isAuthLoading) {
+  //   return (
+  //     <div className="flex h-[50vh] w-full items-center justify-center">
+  //       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+  //     </div>
+  //   );
+  // }
+  // // Double safety guard check
+  // if (!session) return null;
+  const form = useForm<PostFormValues>({ 
+    resolver: zodResolver(postSchema),
+    defaultValues: {
+      content: "",
+      title: "",
+      image: undefined,
+    },
+  });
+  const { isSubmitting } = form.formState;
+   // Combine Hook Form's submission tracking with Next.js's transition router tracking
+  const isLoading = isSubmitting || isPending;
+  async function onSubmit(values: PostFormValues) {
+    console.log("Form passed validation! Sending data to Convex...", values);
+    try {
+      // 1. Await mutation
+      await mutation({
+          body: values.content,
+          title: values.title,
+      });
+      // 2. Trigger toast messaging immediately
+      toast.success("Post created successfully!");
+      form.reset(); // Reset the form after successful submission
+      // 3. Keep the visual loading spinner active while
+      //    Next.js finishes resolving the new page destination
+      //    Pause for 800ms so the user can easily read the toast message,
+      //    then route them back to the index page.
+       // then route them back to the index page.
+      setTimeout(() => {
+        startTransition(() => {
+          router.push("/");
+          router.refresh();
+        });
+      }, 800);
+    } catch (error: any) {
+      // 2. This CATCH block is critical. It resets the "Creating..."
+      // button if the server rejects it.
+      console.error("Convex Server rejected the post:", error);
+      toast.error("Failed to save post.");
+    } 
+  }
+  // ✅ Wrap the page JSX in the ProtectedRoute shell
+  return (
+    <ProtectedRoute>
+      <div className="py-12">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
+            Create Post
+          </h1>
+          <p className="text-xl text-muted-foreground pt-4">
+            Share your thoughts with the big world
+          </p>
+        </div>
+        <Card className="w-full max-w-xl mx-auto">
+          <CardHeader>
+            <CardTitle>Create Blog Article</CardTitle>
+            <CardDescription>Create a new blog article</CardDescription>
+          </CardHeader> 
+          <CardContent>
+            <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
+                    console.log("Zod Validation Failed:", errors);
+                    toast.error("Please fill out all required fields correctly.");
+                  })}
+            >
+              <FieldGroup className="gap-y-4">
+                {/* Title Field */}
+                <Controller
+                  name="title"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field>
+                      <FieldLabel>Title</FieldLabel>
+                      <Input 
+                        aria-invalid={fieldState.invalid}
+                        placeholder="Enter a catchy title" 
+                        {...field} 
+                      />
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
+                  )}
+                />
+                {/* Content Body Field */}
+                <Controller
+                  name="content"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field>
+                      <FieldLabel>Content</FieldLabel>
+                      <Textarea
+                        aria-invalid={fieldState.invalid}
+                        placeholder="Write your blog content here..." 
+                        rows={6}
+                        {...field} 
+                      />
+                      {fieldState.invalid && ( <FieldError errors={[fieldState.error]} />)}
+                    </Field>
+                  )}
+                />
+                {/* Dynamic Submission Button */}
+                <Button type="submit" disabled = {isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      {/* <span className="pl-2">Creating...</span>    */}
+                      Publishing article...
+                    </>
+                  ) : (
+                    // <span>Create Post</span>
+                    "Publish Post"
+                  )}
+                </Button>
+              </FieldGroup>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </ProtectedRoute> 
+  );
+}
+```
+
+
+# SETTING UP A (protected) GROUP
+# Setting up a Next.js Route Group is the cleanest way to handle authentication
+#  Parentheses around a directory name tell Next.js to omit that name from the final browser URL bar
+# app/(protected)/layout.tsx
+```javascript
+"use client";
+import { authClient } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+export default function ProtectedLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const router = useRouter();
+  const { data: session, isPending: isAuthLoading } = authClient.useSession();
+  useEffect(() => {
+    // If the check finishes loading and no session exists, boot the user out
+    if (!isAuthLoading && !session) {
+      toast.error("Please sign in to access this page.");
+      router.push("/auth/login");
+    }
+  }, [session, isAuthLoading, router]);
+  // Keep a clean loading state visible while verifying security tokens
+  if (isAuthLoading) {
+    return (
+      <div className="flex h-[80vh] w-full flex-col items-center justify-center gap-y-2">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground animate-pulse">
+          Verifying security credentials...
+        </p>
+      </div>
+    );
+  }
+  // Prevent restricted interface elements from rendering during redirect handoff
+  if (!session) return null;
+  return <>{children}</>;
+}
+```
+# MOVE FILES TO PROTECTED ROUTE
+app/
+├── (shared-layout)/
+│   ├── layout.tsx         <-- Global navbar / sidebar shell
+│   └── page.tsx           <-- Your main landing feed (resolves to ://domain.com)
+├── (protected)/
+│   ├── layout.tsx         <-- Better-Auth guard check from the previous step
+│   └── create/
+│       └── page.tsx       <-- Create Post view (resolves to ://domain.comcreate)
+├── auth/
+│   ├── login/
+│   │   └── page.tsx       <-- Public login view (resolves to ://domain.comauth/login)
+│   └── signup/
+│       └── page.tsx       <-- Public signup view (resolves to ://domain.comauth/signup)
+└── layout.tsx             <-- Root HTML/Body wrapper with your Sonner <Toaster />
+
+# UPDATED CREATE ROUTE
+# ../app/(protected)/page.tsx
+"use client";
+
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm, Controller } from "react-hook-form";
+import { postSchema } from "@/app/schemas/blog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { api } from "@/convex/_generated/api";
+import { useMutation } from "convex/react"; 
+import { z } from "zod";;
+import { useTransition } from "react";  // Import useTransition from React
+import { Loader2 } from "lucide-react"; // Import the Loader2 icon from lucide-react
+import { toast } from "sonner";// Import the toast function from sonner
+import { useRouter } from "next/navigation"; // Import useRouter from next/navigation
+import { ProtectedRoute } from "@/components/authwrapper/protected-route";
+
+
+type PostFormValues = z.infer<typeof postSchema>;
+
+export default function CreateRoute() {
+  const mutation = useMutation(api.posts.createPost);
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition(); 
+  const form = useForm<PostFormValues>({ 
+    resolver: zodResolver(postSchema),
+    defaultValues: {
+      content: "",
+      title: "",
+      image: undefined,
+    },
+  });
+
+  const { isSubmitting } = form.formState;
+   // Combine Hook Form's submission tracking with Next.js's transition router tracking
+  const isLoading = isSubmitting || isPending;
+
+  async function onSubmit(values: PostFormValues) {
+    console.log("Form passed validation! Sending data to Convex...", values);
+    try {
+      // 1. Await mutation
+      await mutation({
+          body: values.content,
+          title: values.title,
+      });
+      // 2. Trigger toast messaging immediately
+      toast.success("Post created successfully!");
+      form.reset(); // Reset the form after successful submission
+      // 3. Keep the visual loading spinner active while
+      //    Next.js finishes resolving the new page destination
+      //    Pause for 800ms so the user can easily read the toast message,
+      //    then route them back to the index page.
+       // then route them back to the index page.
+      setTimeout(() => {
+        startTransition(() => {
+          router.push("/");
+          router.refresh();
+        });
+      }, 800);
+    } catch (error: any) {
+      // 2. This CATCH block is critical. It resets the "Creating..."
+      // button if the server rejects it.
+      console.error("Convex Server rejected the post:", error);
+      toast.error("Failed to save post.");
+    } 
+  }
+   // ✅ Clean layout: No more explicit wrappers or tracking code needed here
+ ```javascript
+  "use client";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm, Controller } from "react-hook-form";
+import { postSchema } from "@/app/schemas/blog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { api } from "@/convex/_generated/api";
+import { useMutation } from "convex/react"; 
+import { z } from "zod";
+import { useTransition } from "react";  
+import { Loader2 } from "lucide-react"; 
+import { toast } from "sonner";
+import { useRouter } from "next/navigation"; 
+type PostFormValues = z.infer<typeof postSchema>;
+export default function CreateRoute() {
+  const mutation = useMutation(api.posts.createPost);
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition(); 
+  const form = useForm<PostFormValues>({ 
+    resolver: zodResolver(postSchema),
+    defaultValues: {
+      content: "",
+      title: "",
+    },
+  });
+  const { isSubmitting } = form.formState;
+  const isLoading = isSubmitting || isPending;
+  async function onSubmit(values: PostFormValues) {
+    try {
+      await mutation({
+        body: values.content,
+        title: values.title,
+      });
+      toast.success("Post created successfully!");
+      form.reset(); 
+      setTimeout(() => {
+        startTransition(() => {
+          router.push("/");
+          router.refresh();
+        });
+      }, 800);
+    } catch (error) {
+      console.error("Convex Server error:", error);
+      toast.error("Failed to save post.");
+    }
+  }
+  // ✅ Clean layout: No more explicit wrappers or tracking code needed here
+  return (
+    <div className="py-12">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
+          Create Post
+        </h1>
+        <p className="text-xl text-muted-foreground pt-4">
+          Share your thoughts with the big world
+        </p>
+      </div>
+      <Card className="w-full max-w-xl mx-auto">
+        <CardHeader>
+          <CardTitle>Create Blog Article</CardTitle>
+          <CardDescription>Create a new blog article</CardDescription>
+        </CardHeader> 
+        <CardContent>
+          <form 
+            onSubmit={form.handleSubmit(onSubmit, (errors) => {
+              console.log("Zod Validation Failed:", errors);
+              toast.error("Please fill out all required fields correctly.");
+            })}
+          >
+            <FieldGroup className="gap-y-4">
+              <Controller
+                name="title"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel>Title</FieldLabel>
+                    <Input placeholder="Enter a catchy title" aria-invalid={fieldState.invalid} {...field} />
+                    {fieldState.error && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
+              <Controller
+                name="content"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel>Content</FieldLabel>
+                    <Textarea placeholder="Write your blog content here..." rows={6} aria-invalid={fieldState.invalid} {...field} />
+                    {fieldState.error && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
+
+              <Button type="submit" className="w-full mt-2" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Publishing article...
+                  </>
+                ) : (
+                  "Publish Post"
+                )}
+              </Button>
+            </FieldGroup>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+ ```
