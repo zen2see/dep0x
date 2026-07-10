@@ -9,12 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { loginSchema } from "@/app/schemas/auth";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import { z } from "zod";
 
 type LoginValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  
+  const router = useRouter();
+
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -41,10 +43,9 @@ export default function LoginPage() {
         return;
       }
 
-      // ✅ Force navigate to the home page with the flag so the home page layout triggers the toast
-      window.location.href = "/?login=success";
-      
-    } catch (err: any) {
+      router.push("/?login=success");
+
+    } catch (err: unknown) {
       console.error("Login unexpected crash:", err);
       toast.error("Something went wrong during sign in.");
     }

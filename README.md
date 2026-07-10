@@ -26,7 +26,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 # pnpm run dev - TEST
 
 # HOW NEXT WORKS
-Layout.tsx file wraps everything, children are the routs
+Layout.tsx file wraps everything, children are the routes
 If you add "Layout page" in layout.tsx it will be on all children
 
 ## app/layout.tsx 
@@ -360,7 +360,7 @@ export function ThemeToggle() {
 ```
  
 
-# SETUP AUTHENTICATION WITH ROUTE GROUPS (folder convention that lets you org routes ny catecory or team)
+# SETUP AUTHENTICATION WITH ROUTE GROUPS (folder convention that lets you org routes by catecory or team)
 # app/(shared-layout)/page.tsx MOVE app/page.tsx to here
 ## app/auth/sign-up/page.tsx
 
@@ -429,7 +429,6 @@ export const loginSchema = z.object({
 # app/auth/sign-up/page.tsx
 ```javascript
 'use client'
-
 import { authClient } from "@/lib/auth-client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
@@ -441,9 +440,7 @@ import { signUpSchema } from "@/app/schemas/auth";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation"; // 👈 Re-introduced for soft routing execution
 import { z } from "zod";
-
 type SignUpValues = z.infer<typeof signUpSchema>;
-
 export default function SignUpPage() {
   const router = useRouter(); // 👈 Initialize the Next.js router
   const form = useForm<SignUpValues>({
@@ -463,28 +460,23 @@ export default function SignUpPage() {
         password: data.password,
         name: data.name, // 👈 Explicitly pass the name field here
       });
-
       // Catch error fields inside the response block
           if (response?.error) {
         toast.error(response.error.message || "Registration failed");
         return;
       }
-
       // ✅ Step 1: Fire the success notification immediately!
       toast.success("Account created successfully");
-      
       // ✅ Step 2: Use client routing with a slight pause so the toast registers
       setTimeout(() => {
         router.push("/");
         router.refresh(); // Tells the application layout to look for new cookies
-      }, 1000);
-      
+      }, 1000);  
     } catch (err: any) {
       console.error("Login execution crash:", err);
       toast.error("Something went wrong during sign in.");
     }
   }
-
   return (
     <Card className="mx-auto w-full max-w-md">
       <CardHeader>
@@ -1078,7 +1070,7 @@ export function Navbar() {
 # Add to app/layout.tsx
 ...
   </main>
-          <Toaster CloseButton />
+          <Toaster closeButton />
 ...
 
 
@@ -1651,7 +1643,7 @@ import z from 'zod'
 export const postSchema = z.object({
     title: z.string().min(3).max(50),
     content: z.string().min(10).max(1000), 
-    image:  z.instanceof(File),
+    image:  z.instanceof(File).optional(),
 });
 
 ```
@@ -1708,6 +1700,8 @@ export default function CreateRoute() {
     defaultValues: {
       content: "",
       title: "",
+      image: undefined, // Added to match schema shape
+    
     },
   });
   const { isSubmitting } = form.formState;
@@ -1789,17 +1783,7 @@ export default function CreateRoute() {
 }
 ```
 
-# CREATE POSTS BUTTON 2:48
-# app/(shared-layout)/crete/page.tsx
-```javascript
-import { Button } from "@/components/ui/button";
-...
- {/* 👈 Added dynamic button states for safety during submission */}
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Creating..." : "Create Post"}
-              </Button>
-```
-# CREATE SCHEMA FOR POSTS BUTTON :53
+# CREATE SCHEMA FOR POSTS BUTTON 2:53
 # ../convex/schema.ts
 ```javascript
 import { defineSchema, defineTable } from "convex/server"
@@ -1812,9 +1796,10 @@ export default defineSchema({
     })
 })
 ```
-# DELETE TASKS FROM CONVEX TABELS (ON WEBSITE)
+# DELETE TASKS FROM CONVEX TABELS (ON WEBSITE) AND FOLDER IN CONVEX 
 
-# CREATE POSTS.TS
+#  FUNCTIONS - MUTATATIONS: WRITE DATA, QUERY: GET DATA ACTIONS: CALL SERVICES
+# CREATE POSTS.TS -
 # ../convex/posts.ts
 ```javascript
 import { mutation } from "_generated/server";
@@ -1840,12 +1825,195 @@ export const createPost = mutation({
 })
 ```
 
-# ADD CreateRoute() - A GET REQUEST
-# app/(shared-layout)/create/page.tsx
+# pnpm add better-auth@^1.6.11 UPGRADE 
+
+# HAD TO RESET SECRET
+# npx convex env set BETTER_AUTH_SECRET=$(openssl rand -base64 32)
+# npx convex env set SITE_URL http://localhost:3000
+
+# FIX CONVEXCLIENTPROVIDER
+# ../components/web/ConvexClienProvider.tsx
 ```javascript
-...
-export default function CreateRoute() {
-  const mutation = useMutation(api.posts.createPosts)
-  const form = useForm({
-...
+'"use client";
+import { ReactNode } from "react";
+import { ConvexReactClient } from "convex/react";
+import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
+import { authClient } from "@/lib/auth-client";  
+const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!, {
+  // Optionally pause queries until the user is authenticated
+  expectAuth: true, // no user data if not authenticated
+});
+export function ConvexClientProvider({ children }: { children: ReactNode }) {
+  return (
+    <ConvexBetterAuthProvider client={convex} authClient={authClient as any}>
+      {children}
+    </ConvexBetterAuthProvider>
+  );
+}
 ```
+ When you log in via Better-Auth, the convexClient() plugin automatically intercepts your active session token. It then passes it directly into the <ConvexBetterAuthProvider> wrapper context.Once these updates are saved, your console statuses on your Create Post page should switch automatically to:Is Better-Auth Logged In?: trueIs Convex Client Synced?: true 
+
+# ADD TOAST MESSAGE TO CREATE POSTS AND REDIRECT TO .
+# ../app/(shared-layout)/create/page.tsx
+```javascript
+"use client";
+
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm, Controller } from "react-hook-form";
+import { postSchema } from "@/app/schemas/blog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { api } from "@/convex/_generated/api";
+import { useMutation, useConvexAuth } from "convex/react"; 
+import { authClient } from "@/lib/auth-client"; 
+import { z } from "zod";
+import { useEffect } from "react";
+import { useTransition } from "react";  // Import useTransition from React
+import { Loader2 } from "lucide-react"; // Import the Loader2 icon from lucide-react
+import { toast } from "sonner";// Import the toast function from sonner
+import { useRouter } from "next/navigation"; // Import useRouter from next/navigation
+
+
+type PostFormValues = z.infer<typeof postSchema>;
+
+export default function CreateRoute() {
+  const mutation = useMutation(api.posts.createPost);
+  const router = useRouter();
+  // 1. Get auth states to see what is failing
+  const { data: session } = authClient.useSession();
+  const { isAuthenticated } = useConvexAuth();
+  const [isPending, startTransition] = useTransition(); // Initialize useTransition
+
+  // 👈 Wrap this in a useEffect so it only prints ONCE when the status changes
+  useEffect(() => {
+    console.log("--- SYSTEM AUTH STATUS ---");
+    console.log("Is Better-Auth Logged In?:", !!session);
+    console.log("Is Convex Client Synced?:", isAuthenticated);
+  }, [session, isAuthenticated]); 
+
+  const form = useForm<PostFormValues>({ 
+    resolver: zodResolver(postSchema),
+    defaultValues: {
+      content: "",
+      title: "",
+      image: undefined,
+    },
+  });
+
+  const { isSubmitting } = form.formState;
+
+   // Combine Hook Form's submission tracking with Next.js's 
+   // transition router tracking
+  const isLoading = isSubmitting || isPending;
+
+  async function onSubmit(values: PostFormValues) {
+    console.log("Form passed validation! Sending data to Convex...", values);
+    try {
+      // 1. Send data to Convex and wait for the server confirmation
+      await mutation({
+          body: values.content,
+          title: values.title,
+      });
+      // 2. Trigger toast messaging immediately
+      toast.success("Post created successfully!");
+      form.reset(); // Reset the form after successful submission
+
+       // 3. Keep the visual loading spinner active while Next.js finishes resolving the new page destination
+      startTransition(() => {
+        router.push("/");
+        router.refresh();
+      }); 
+    } catch (error) {
+      // 2. This CATCH block is critical. It resets the "Creating..." button if the server rejects it.
+      console.error("Convex Server rejected the post:", error);
+      alert("Error: Look at your browser console to see the backend message!");
+    } 
+  }
+
+  return (
+    <div className="py-12">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
+          Create Post
+        </h1>
+        <p className="text-xl text-muted-foreground pt-4">
+          Share your thoughts with the big world
+        </p>
+      </div>
+      <Card className="w-full max-w-xl mx-auto">
+        <CardHeader>
+          <CardTitle>Create Blog Article</CardTitle>
+          <CardDescription>Create a new blog article</CardDescription>
+        </CardHeader> 
+        <CardContent>
+          <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
+            console.log("Zod Validation Failed:", errors);
+              toast.error("Please fill out all required fields correctly.");
+            })}
+          >
+            <FieldGroup className="gap-y-4">
+               {/* Title Field */}
+              <Controller
+                name="title"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel>Title</FieldLabel>
+                    <Input 
+                      aria-invalid={fieldState.invalid}
+                      placeholder="Enter a catchy title" 
+                      {...field} 
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+              {/* Content Body Field */}
+              <Controller
+                name="content"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel>Content</FieldLabel>
+                    <Textarea
+                      aria-invalid={fieldState.invalid}
+                      placeholder="Write your blog content here..." 
+                      // rows={6}
+                      {...field} 
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+              {/* <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Creating..." : "Create Post"}
+              {/* Dynamic Submission Button */}
+              <Button disabled = {isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    {/* <span className="pl-2">Creating...</span>    */}
+                    Publishing article...
+                  </>
+                ) : (
+                  // <span>Create Post</span>
+                  "Publish Post"
+                )}
+              </Button>
+            </FieldGroup>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+```
+Correct Async Sequence: The code now blocks on await mutation(...) before entering the route transition block. This prevents asynchronous race conditions between the application state changes and database state writes.Aggregated Loading States: Combined isSubmitting and isPending into a single isLoading value. The spinner icon stays running while Next.js fetches data for the index page route.Replaced alert(): Swapped the harsh browser popup alert out for clean, non-blocking toast.error messages inside both error catch conditions.Strict Controlled Forms: Connected explicit <Controller /> hooks for the input and text area properties mapped to match your schema setup.
+

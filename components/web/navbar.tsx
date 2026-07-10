@@ -7,25 +7,28 @@ import { useConvexAuth } from "convex/react"
 import { authClient } from "@/lib/auth-client"
 import { toast } from "sonner"
 import { SearchInput } from "./SearchInput"
+import { useRouter } from "next/navigation"
 
 export function Navbar() {
     const { isAuthenticated, isLoading } = useConvexAuth()
-
+    const router = useRouter()
     const handleLogout = async () => {
         try {
-            // 👈 Better Auth native logout wrapper
-            const response = await authClient.signOut({
-                // callbackURL forces a clean redirection while allowing the local code context to finish executing toasts
-                callbackURL: "/" 
+            // ✅ Better Auth standard signOut syntax using fetchOptions
+            await authClient.signOut({
+                fetchOptions: {
+                    onSuccess: () => {
+                        toast.success("Logged out successfully", { duration: 6000 });
+                        
+                        // Force a clean redirect and state update
+                        router.push("/");
+                        router.refresh(); 
+                    },
+                    onError: (ctx) => {
+                        toast.error(ctx.error.message || "Failed to log out", { duration: 8000 });
+                    }
+                }
             });
-
-            if (response?.error) {
-                toast.error(response.error.message || "Failed to log out", {duration: 8000 });
-                return;
-            }
-
-            // Keep the logout success message on screen for 6 seconds
-            toast.success("Logged out successfully", { duration: 6000 });
 
         } catch (error) {
             console.error("Logout runtime error:", error);

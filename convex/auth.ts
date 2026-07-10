@@ -6,10 +6,24 @@ import { createClient, type GenericCtx } from '@convex-dev/better-auth';
 import { convex } from '@convex-dev/better-auth/plugins';
 import authConfig from './auth.config';
 
-const siteURL = 
-  process.env.NEXT_PUBLIC_SITE_URL ?? 
-  process.env.NEXT_PUBLIC_CONVEX_SITE_URL ?? 
+declare const process: {
+  env: Record<string, string | undefined>;
+};
+
+const siteURL =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  process.env.NEXT_PUBLIC_CONVEX_SITE_URL ??
   'http://localhost:3000';
+
+const trustedOrigins = [
+  siteURL,
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3001',
+  'http://localhost:3002',
+  'http://127.0.0.1:3002',
+].filter(Boolean);
 
 // The component client has methods needed for integrating Convex with Better Auth.
 export const authComponent = createClient<DataModel>(components.betterAuth);
@@ -17,6 +31,13 @@ export const authComponent = createClient<DataModel>(components.betterAuth);
 export const createAuth = (ctx: GenericCtx<DataModel>) => {
     return betterAuth({
         baseURL: siteURL,
+        trustedOrigins,
+        cors: {
+            enabled: true,
+            origin: trustedOrigins,
+            methods: ['GET', 'POST', 'OPTIONS'],
+            allowHeaders: ['content-type', 'authorization'],
+        },
         database: authComponent.adapter(ctx),
         emailAndPassword: {
             enabled: true,

@@ -1,14 +1,10 @@
 "use client";
 
-import Image from "next/image"
-import Link from "next/link"
+import Image from "next/image";
+import Link from "next/link";
 import { useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-
-// export default function HomePage() {
-//   const searchParams = useSearchParams();
-//   const router = useRouter();
  
 // 1. Create a sub-component that safely hooks into the URL parameters
  function AuthToastListener() {

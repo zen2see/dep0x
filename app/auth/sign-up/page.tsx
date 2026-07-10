@@ -11,6 +11,7 @@ import { signUpSchema } from "@/app/schemas/auth";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation"; // 👈 Re-introduced for soft routing execution
 import { z } from "zod";
+import { useTransition } from "react";
 
 type SignUpValues = z.infer<typeof signUpSchema>;
 
@@ -25,13 +26,14 @@ export default function SignUpPage() {
     },
   });
   const { isSubmitting } = form.formState;
-  async function onSubmit(data: signUpValues) {
+  async function onSubmit(data: SignUpValues) {
     try {
       // 👈 Await the response from Better Auth
       const response = await authClient.signUp.email({
         email: data.email,
-        password: data.password,
         name: data.name, // 👈 Explicitly pass the name field here
+        password: data.password,
+        
       });
 
       // Catch error fields inside the response block
@@ -49,7 +51,7 @@ export default function SignUpPage() {
         router.refresh(); // Tells the application layout to look for new cookies
       }, 1000);
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Login execution crash:", err);
       toast.error("Something went wrong during sign in.");
     }
