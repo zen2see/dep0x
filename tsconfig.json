@@ -20,7 +20,11 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./app/*"],
+      "@components/*": ["./components/*"],
+      "@lib/*": ["./lib/*"],
+      "@convex/*": ["./convex/*"],
+      "@actions/*": ["./actions/*"],
     }
   },
   "include": [

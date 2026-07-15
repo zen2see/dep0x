@@ -2348,7 +2348,6 @@ import { useTransition } from "react";
 import { Loader2 } from "lucide-react"; 
 import { toast } from "sonner";
 import { useRouter } from "next/navigation"; 
-
 type PostFormValues = z.infer<typeof postSchema>;
 export default function CreateRoute() {
   const mutation = useMutation(api.posts.createPost);
@@ -2500,7 +2499,7 @@ import { CreateBlogAction } from "@/app/actions";
 ```
 
 # ROUTE HANDLERS allow you to create custom request handlers for a given route
-# using the Web Request and Response APIs
+# using the Web Request and Response APIs 3:15
 # app/api/create-blog/route.ts
 ```javascript
 import { createExhaustiveParamsProxy } from "next/dist/server/app-render/instant-validation/instant-samples";
@@ -2583,7 +2582,29 @@ form.reset();
     ...
 ```
 
+# SERVER ACTIONS REDO 3:21
+# app/actions.ts
+```javascript
+"use server"
+import { postSchema } from "@/schemas/blog";
+import z from "zod";
+import { fetchMutation } from "convex/nextjs";
+import { api } from "@convex/_generated/api";
+import { useForm } from "react-hook-form";
+import { redirect } from "next/navigation";
+type PostFormValues = z.infer<typeof postSchema>;
+export async function CreateBlogAction(values: PostFormValues) {
+    const parsed = postSchema.safeParse(values);
+    if (!parsed.success) {
+        throw new Error("Something went wrong");
+    }
+    await fetchMutation(api.posts.createPost, {
+        body: parsed.data.content,
+        title: parsed.data.title,
+    })
+    redirect("/", "replace");
+}
 
-
-
+```
+3:36
 

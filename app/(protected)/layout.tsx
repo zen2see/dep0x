@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useTransition } from "react";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "../../components/ui/button";
 import Link from "next/link";
 
 export default function ProtectedLayout({

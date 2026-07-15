@@ -1,21 +1,21 @@
 "use client";
 
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldError, FieldGroup, FieldLabel } from "../../../components/ui/field";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
-import { postSchema } from "@/app/schemas/blog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { api } from "@/convex/_generated/api";
+import { postSchema } from "@/schemas/blog";
+import { Input } from "@components/ui/input";
+import { Textarea } from "@components/ui/textarea";
+import { Button } from "@components/ui/button";
+import { api } from "@convex/_generated/api";
 import { useMutation } from "convex/react"; 
 import { z } from "zod";
 import { useTransition } from "react";  
 import { Loader2 } from "lucide-react"; 
 import { toast } from "sonner";
 import { useRouter } from "next/navigation"; 
-import { CreateBlogAction } from "@/app/actions";
+import { CreateBlogAction } from "@actions";
 
 type PostFormValues = z.infer<typeof postSchema>;
 

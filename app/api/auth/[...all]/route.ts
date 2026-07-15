@@ -1,4 +1,4 @@
-import { handler } from "@/lib/auth";
+import { handler } from "@lib/auth";
 
 export const dynamic = "force-dynamic";
 
