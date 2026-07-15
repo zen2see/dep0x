@@ -15,6 +15,7 @@ import { useTransition } from "react";
 import { Loader2 } from "lucide-react"; 
 import { toast } from "sonner";
 import { useRouter } from "next/navigation"; 
+import { CreateBlogAction } from "@/app/actions";
 
 type PostFormValues = z.infer<typeof postSchema>;
 
@@ -36,27 +37,44 @@ export default function CreateRoute() {
 
   async function onSubmit(values: PostFormValues) {
     try {
-      await mutation({
-        body: values.content,
-        title: values.title,
-      });
-
-      toast.success("Post created successfully!");
+      // await mutation({
+      //   body: values.content,
+      //   title: values.title,
+      // });
+      // console.log("This runs on the client side") 
+      // Will show up in web developer tools
+      // You also will get a message from the console.log of app/actions.ts
+      // SERVER ACTION
+      // await CreateBlogAction()
       form.reset(); 
-
       setTimeout(() => {
-        startTransition(() => {
+        startTransition(async() => {
+          // ROUTE HANDLER
+          console.log("Hey this runs on the client side - ROUTE HANDLER")
+          const response = await fetch('/api/create-blog', {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              title: values.title,
+              content: values.content,
+            }),
+          });
+          const result = await response.json();
+          if (!response.ok || !result.success) {
+            throw new Error(result.error || "Failed to create post");
+          }
+          toast.success("Post created successfully!");
           router.push("/");
           router.refresh();
         });
       }, 800);
-
     } catch (error) {
       console.error("Convex Server error:", error);
       toast.error("Failed to save post.");
     }
   }
-
   // ✅ Clean layout: No more explicit wrappers or tracking code needed here
   return (
     <div className="py-12">

@@ -2348,6 +2348,7 @@ import { useTransition } from "react";
 import { Loader2 } from "lucide-react"; 
 import { toast } from "sonner";
 import { useRouter } from "next/navigation"; 
+
 type PostFormValues = z.infer<typeof postSchema>;
 export default function CreateRoute() {
   const mutation = useMutation(api.posts.createPost);
@@ -2446,3 +2447,143 @@ export default function CreateRoute() {
   );
 }
  ```
+
+# IF VSCODE CRASHES CLEAR CORRUPTED REMOTE SERVER COODE
+# rm -rf ~/.vscode-server
+# reopen vscode OR/AND
+# POWERSHELL
+# Set-Service hns -StartupType Automatic
+# Start-Service hns
+
+
+# SERVER ACTIONS 3:10 MAKE SURE USER IS AUTHENTICATED
+# app/actions.ts  TEST
+```javascript
+"use server"
+export async function CreateBlogAction() {
+    console.log("Hello from a server action")
+}
+```
+
+# app/(protected)/create/page.tsx
+```javascript
+"use client";
+...
+import { CreateBlogAction } from "@/app/actions";
+...
+ async function onSubmit(values: PostFormValues) {
+    try {
+      // await mutation({
+      //   body: values.content,
+      //   title: values.title,
+      // });
+      console.log("This runs on the client side") 
+      // Will show up in web developer tools
+      // You also will get a message from the console.log of app/actions.ts
+      // await CreateBlogAction()
+      // form.reset(); 
+      // You will get a message from the console.log of app/actions.ts
+       setTimeout(() => {
+        startTransition(async() => {
+          // ROUTE HANDLER
+          console.log("Hey this runs on the client side - ROUTE HANDLER")
+          await fetch('@/api/create-blog', {
+            method: "POST",
+          })
+          toast.success("Post created successfully!");
+          router.push("/");
+          router.refresh();
+        });
+      }, 800);
+    } catch (error) {
+  ...
+```
+
+# ROUTE HANDLERS allow you to create custom request handlers for a given route
+# using the Web Request and Response APIs
+# app/api/create-blog/route.ts
+```javascript
+import { createExhaustiveParamsProxy } from "next/dist/server/app-render/instant-validation/instant-samples";
+import { NextResponse } from "next/server";
+export async function POST() {
+   console.log("Hello from the server -Route Handler") 
+   return NextResponse.json({
+    success: true
+   })
+}
+```
+
+# HAD TO UPDATE route.ts
+# now reads JSON body, validates title and content
+# calls fetchAuthMutation(api.posts.createPost, { title, body: content })
+# returns success/error JSON
+# app/api/create-blog/route.ts
+```javascript
+import { NextResponse } from "next/server";
+import { fetchAuthMutation } from "@/lib/auth";
+import { api } from "@/convex/_generated/api";
+export async function POST(request: Request) {
+  const body = await request.json();
+  const { title, content } = body;
+
+  if (typeof title !== "string" || typeof content !== "string") {
+    return NextResponse.json(
+      { success: false, error: "Missing title or content" },
+      { status: 400 },
+    );
+  }
+  try {
+    const post = await fetchAuthMutation(api.posts.createPost, {
+      title,
+      body: content,
+    });
+    return NextResponse.json({ success: true, post });
+  } catch (error) {
+    console.error("Error creating post:", error);
+    return NextResponse.json(
+      { success: false, error: String(error) },
+      { status: 500 },
+    );
+  }
+}
+```
+# page.tsx sends title and content as JSON to /api/create-blog
+# throws on non-ok response still navigates home on success
+# app/(protected)/create/page.tsx
+```javascript
+...
+form.reset(); 
+      setTimeout(() => {
+        startTransition(async() => {
+          // ROUTE HANDLER
+          console.log("Hey this runs on the client side - ROUTE HANDLER")
+          const response = await fetch('/api/create-blog', {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              title: values.title,
+              content: values.content,
+            }),
+          });
+          const result = await response.json();
+          if (!response.ok || !result.success) {
+            throw new Error(result.error || "Failed to create post");
+          }
+          toast.success("Post created successfully!");
+          router.push("/");
+          router.refresh();
+        });
+      }, 800);
+    } catch (error) {
+      console.error("Convex Server error:", error);
+      toast.error("Failed to save post.");
+    }
+    ...
+```
+
+
+
+
+
