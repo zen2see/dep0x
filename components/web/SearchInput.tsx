@@ -1,8 +1,8 @@
 import { Loader2, Search } from "lucide-react";
-import { Input } from "../ui/input";
+import { Input } from "@components/ui/input";
 import React, { useState } from "react";
 import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { api } from "@convex/_generated/api";
 import Link from "next/link";
 
 export function SearchInput() {

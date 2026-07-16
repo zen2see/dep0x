@@ -1,12 +1,13 @@
 "use client";
 
-import { authClient } from "@/lib/auth-client";
+import { authClient } from "@lib/auth-client";
 import { useRouter } from "next/navigation";
-import { useEffect, useTransition } from "react";
+import { useEffect } from "react";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { buttonVariants } from "../../components/ui/button";
+import { buttonVariants } from "@components/ui/button";
 import Link from "next/link";
+import { Navbar } from "../../components/web/navbar";
 
 export default function ProtectedLayout({
   children,
@@ -39,17 +40,21 @@ export default function ProtectedLayout({
   if (!session) return null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative w-full">
-      {/* Absolute Back Button Layout Anchor */}
-      <div className="absolute top-5 left-5 z-50">
-        <Link href="/" className={buttonVariants({ variant: "secondary" })}>
-          <ArrowLeft className="mr-2 size-4" />
-          Go Back
-        </Link>
+    <div className="min-h-screen w-full">
+      <Navbar />
+
+      <div className="relative w-full">
+        <div className="absolute left-5 top-5 z-50">
+          <Link href="/" className={buttonVariants({ variant: "secondary" })}>
+            <ArrowLeft className="mr-2 size-4" />
+            Go Back
+          </Link>
+        </div>
+
+        <main className="mx-auto flex w-full max-w-7xl flex-col px-4 py-16 md:px-6 lg:px-8">
+          {children}
+        </main>
       </div>
-      
-      {/* Wrapped Page Views Content Container */}
-      <div className="w-full h-full">{children}</div>
     </div>
   );
 }

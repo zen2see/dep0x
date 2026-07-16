@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "../components/web/navbar";
-import { cn } from "@/lib/utils";
+import { cn } from "@lib/utils";
 import { ThemeProvider } from "../components/ui/theme-provider";
 import { ConvexClientProvider } from "../components/web/ConvexClientProvider";  
 import { Toaster } from "../components/ui/sonner";

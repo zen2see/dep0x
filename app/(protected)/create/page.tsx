@@ -4,7 +4,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "../../../components/u
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
-import { postSchema } from "@/schemas/blog";
+import { postSchema } from "@/app/schemas/blog";
 import { Input } from "@components/ui/input";
 import { Textarea } from "@components/ui/textarea";
 import { Button } from "@components/ui/button";
@@ -15,7 +15,7 @@ import { useTransition } from "react";
 import { Loader2 } from "lucide-react"; 
 import { toast } from "sonner";
 import { useRouter } from "next/navigation"; 
-import { CreateBlogAction } from "@actions";
+import { CreateBlogAction } from "@/actions";
 
 type PostFormValues = z.infer<typeof postSchema>;
 

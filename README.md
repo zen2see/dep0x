@@ -2604,7 +2604,151 @@ export async function CreateBlogAction(values: PostFormValues) {
     })
     redirect("/", "replace");
 }
-
 ```
 3:36
 
+# FETCH DATA
+# Queries from backend API fetch data from the db, check auth or perform other biz logic
+# DEFINE A QUERY CONSTRUCTOR
+# app/convex/posts.ts
+```javascript
+...
+export const getPosts = query({
+    args: {},
+    handler: async (ctX) => {
+        const posts = await ctX.db.query('posts').order('desc').collect();
+        return posts;
+    }
+})
+```
+
+# CREATE ROUTE FOR BLOG
+# app/(protected)/blog/page.tsx
+```javascript
+export default function BlogPage() {
+    return <h1>Hello from bog page</h1>
+}
+```
+# TEST 
+# NOW FETCH DATA
+# app/(protected)/blog/page.tsx
+```javascript
+"use client"
+import { api } from "@convex/_generated/api"
+import { useQuery } from "convex/react" // only works in cient
+export default function BlogPage() {
+    const posts = useQuery(api.posts.getPosts) 
+    if (!posts) return <p>Loading...</p>;
+    if (posts.length === 0) return <p>No posts yet.</p>;
+    return (
+        <div>
+            <h1>hello from blog page</h1>
+            <p>{posts[0].title}</p>
+        </div> 
+    )
+}
+```
+# TEST AGAIN SHOULD SEE TITLE UNDER HELLO TEXT
+# FINISH UI 3:56
+# app/(protected)/blog/page.tsx
+```javascript
+"use client"
+import { Card } from "@/components/ui/card";
+import { api } from "@convex/_generated/api"
+import { useQuery } from "convex/react" // only works in cient
+import { Key } from "react";
+export default function BlogPage() {
+    const posts = useQuery(api.posts.getPosts) 
+    if (!posts) return <p>Loading...</p>;
+    if (posts.length === 0) return <p>No posts yet.</p>;
+    return (
+        <div className="py-12">
+            <div className="text-center pb-12">
+                <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
+                    Our Blog
+                </h1>
+                <p className="pt-4 max-w-2xl mx-auto text-xl text-muted-foreground">
+                    Insights, thoughts, and trends from our team.
+                </p>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">    
+                {posts?.map((post: { _id: Key | null | undefined; }) => (
+                    <Card key={post._id}>
+                        <div>
+                            <Image src="https://ix-marketing.imgix.net/bg-remove_after.png?auto=format,compress&w=688"
+                             alt="" />
+                        </div>
+                    </Card>
+                ))}
+            </div>
+        </div> 
+    )
+}
+```
+# TEST YOU WILL SEE A PHOTO FOR EVERY BLOG POSTS
+
+# UPDATEnextconfig.ts TO ADD HOSTNAME, PROTOCOL AND PORT
+```python
+import type { NextConfig } from "next";
+const nextConfig: NextConfig = {
+  /* config options here */
+  images: {
+    remotePatterns: [
+      {
+        hostname: 'ix-marketing.imgix.net',
+        protocol: 'https',
+        port: "",
+      }
+    ]
+  }
+};
+export default nextConfig;
+```
+
+# UPDATE IMAGE PROPERTIES 4:10 NOW USING FILL W/RELATIVE AND FILL
+# sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" to STP{ WARNING}
+# # app/(protected)/blog/page.tsx
+```javascript
+...
+<Card key={post._id}>
+                        <div className="relative h-48 w-full overflow-hidden">
+                            <Image src="https://ix-marketing.imgix.net/bg-remove_after.png?auto=format,compress&w=688"
+                             alt="image"
+                            fill
+                             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            />
+                        </div>
+...    
+```                    
+
+# ERROR Property 'title' does not exist on type '{ _id: Key | null | undefined; }'.
+# FIX IS app(portected)/blog/page.tsx
+# Line 8 Remove import { key } from "react"
+# Add import { Doc } from "convex/_generated/dataModel"
+# "paths": {
+#      "@convex_generated/*": ["./convex/_generated/*"]
+#    }
+#  },
+# Line 27 Remove {posts?.map((post: { _id: key | null | undefined; }) => ()
+# Add {posts?.map((post: Doc<"posts">) => (
+ 
+ # RESTART TYPESCRIPT SERVER
+ # pnpm exec convex dev
+
+# ABOVE DIDN'T WORK FOR title doesn't exist HAD TO:
+# The error happens because you typed the post object inline as { _id: Key | null | undefined; }, 
+# which explicitly # tells TypeScript that _id is the only property that exists on a post.When
+# you try to access post.title, TypeScript blocks it because title was not included in that 
+# inline type definition.
+# # # app/(protected)/blog/page.tsx
+```javascript
+...
+ {/* <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">    
+                {posts?.map((post: { _id: Key | null | undefined; }) => ( */}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">    
+    {/* 2. Cast post as Doc<"posts"> (replace "posts" with your actual Convex table name) */}
+```
+
+# SETTING ONE LAYOUT FILE THAT IS PROTECTED
+# app/(protected)/layout.tsx
+# UPDATING THEME FOR BLOG PAGE 
