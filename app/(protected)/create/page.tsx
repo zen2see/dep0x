@@ -15,7 +15,7 @@ import { useTransition } from "react";
 import { Loader2 } from "lucide-react"; 
 import { toast } from "sonner";
 import { useRouter } from "next/navigation"; 
-import { CreateBlogAction } from "@/actions";
+import { CreateBlogAction } from "@/app/actions";
 
 type PostFormValues = z.infer<typeof postSchema>;
 

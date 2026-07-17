@@ -2688,7 +2688,7 @@ export default function BlogPage() {
 # TEST YOU WILL SEE A PHOTO FOR EVERY BLOG POSTS
 
 # UPDATEnextconfig.ts TO ADD HOSTNAME, PROTOCOL AND PORT
-```python
+```javascript
 import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
@@ -2716,6 +2716,7 @@ export default nextConfig;
                              alt="image"
                             fill
                              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                             className="rounded-t-lg"
                             />
                         </div>
 ...    
@@ -2749,6 +2750,103 @@ export default nextConfig;
     {/* 2. Cast post as Doc<"posts"> (replace "posts" with your actual Convex table name) */}
 ```
 
-# SETTING ONE LAYOUT FILE THAT IS PROTECTED
+# SETTING ONE LAYOUT FILE THAT IS STILL PROTECTED
+# The update is straightforward: the protected layout will now wrap 
+# pages with the navbar while preserving the auth redirect behavior.
 # app/(protected)/layout.tsx
-# UPDATING THEME FOR BLOG PAGE 
+```javascript
+"use client";
+import { authClient } from "@lib/auth-client";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { Loader2, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
+import { buttonVariants } from "@components/ui/button";
+import Link from "next/link";
+import { Navbar } from "../../components/web/navbar";
+export default function ProtectedLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const router = useRouter();
+  const { data: session, isPending: isAuthLoading } = authClient.useSession();
+  useEffect(() => {
+    if (!isAuthLoading && !session) {
+      toast.error("Please sign in to access this page.");
+      router.push("/auth/login");
+    }
+  }, [session, isAuthLoading, router]);
+  // Keep a clean loading state visible while verifying security tokens
+  if (isAuthLoading) {
+    return (
+      <div className="flex h-[80vh] w-full flex-col items-center justify-center gap-y-2">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground animate-pulse">
+          Verifying security credentials...
+        </p>
+      </div>
+    );
+  }
+  // Prevent restricted interface elements from rendering during redirect handoff
+  if (!session) return null;
+  return (
+    <div className="min-h-screen w-full">
+      <Navbar />
+      <div className="relative w-full">
+        <div className="absolute left-5 top-5 z-50">
+          <Link href="/" className={buttonVariants({ variant: "secondary" })}>
+            <ArrowLeft className="mr-2 size-4" />
+            Go Back
+          </Link>
+        </div>
+        <main className="mx-auto flex w-full max-w-7xl flex-col px-4 py-16 md:px-6 lg:px-8">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}
+```
+
+# UPDATING THEME FOR BLOG PAGE https://ui.shadcn.com/create
+# APP SET WITH INTER (SANS FONT) GEIST MONO AS ALT
+# COPY CODE FOR BLUE THEME FONT - INTER
+# globals.css, delete root and dark only from your choice
+
+# UPDATED TEXT ON HOVER FOR BLOG PAGE ALSO ADDED TEXT
+# app/(protected)/blog/page.tsx
+...
+  <CardContent>
+      <Link href={`/blog/${String(post._id)}`}>
+          <h1 className="text-2xl font-bold transition-colors hover:text-primary">
+              {post.title}
+          </h1>
+          </Link>
+              <p className="text-muted-foreground line-clamp-3">{post.body}</p>
+                  </CardContent>
+                  <CardFooter>
+                    <Link className={buttonVariants({className: "w-full",})} href={`/blog/${post._id}`}>Read more
+                    </Link> 
+                  </CardFooter>
+...
+
+# NOW FETCH DATA ON SERVER SIDE USING FETCHQUERY
+# app(protected)/blog/page.tsx
+```javascript
+// "use client"
+...
+// import { api } from "@convex/_generated/api"
+// import { useQuery } from "convex/react" // only works in cient
+import { fetchQuery } from "convex/nextjs";
+...
+export default async function BlogPage() {
+    // const posts = useQuery(api.posts.getPosts) 
+    const posts = await fetchQuery(api.posts.getPosts);
+    if (!posts) return <p>Loading...</p>;
+    if (posts.length === 0) return <p>No posts yet.</p>;
+...
+```
+
+# INSTALLED POSTCSS LANGUAGE SUPPORT TO RID @theme warning
+# INSTALLED TAIWIND CSS INTELLISENSE AS WELL
