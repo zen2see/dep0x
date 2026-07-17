@@ -6,19 +6,15 @@ import { Doc } from "@convex/_generated/dataModel";
 // import { useQuery } from "convex/react" // only works in cient
 import Image from "next/image";
 import Link from "next/link";
-import { Key } from "react";
+import { Key, Suspense } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { resolve } from "path";
 
-export default async function BlogPage() {
-    await new Promise((resolve) => setTimeout(resolve, 5000))
-    // const posts = useQuery(api.posts.getPosts) 
-    const posts = await fetchQuery(api.posts.getPosts);
-    if (!posts) return <p>Loading...</p>;
-    // if (posts.length === 0) return <p>No posts yet.</p>;
-
+export default function BlogPage() {
+    // await new Promise((resolve) => setTimeout(resolve, 5000)) 
+    // // const posts = useQuery(api.posts.getPosts) 
     return (
         <div className="py-12">
             <div className="text-center pb-12">
@@ -31,9 +27,22 @@ export default async function BlogPage() {
             </div>
             {/* <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">    
                 {posts?.map((post: { _id: Key | null | undefined; }) => ( */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">    
+            <Suspense 
+              fallback={<p className="text-5xl text-red-500 px-10">Loading...</p>}
+            >
+                <LoadBlogList />
+            </Suspense>
+        </div> 
+    )
+}
+
+async function  LoadBlogList() {
+     await new Promise((resolve) => setTimeout(resolve, 5000))
+     const data = await fetchQuery(api.posts.getPosts)   
+     return (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">    
             {/* 2. Cast post as Doc<"posts"> (replace "posts" with your actual Convex table name) */}
-            {posts?.map((post: Doc<"posts">) => (    
+            {data?.map((post) => (    
                     <Card className="pt-0" key={post._id}>
                         <div className="relative h-48 w-full overflow-hidden">
                             <Image src="https://ix-marketing.imgix.net/footer-image.png?ixembed=1731958278380&auto=format,compress"
@@ -58,6 +67,6 @@ export default async function BlogPage() {
                     </Card>
                 ))}
             </div>
-        </div> 
+
     )
 }
