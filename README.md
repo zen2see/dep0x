@@ -2831,7 +2831,14 @@ export default function ProtectedLayout({
                   </CardFooter>
 ...
 
-# NOW FETCH DATA ON SERVER SIDE USING FETCHQUERY
+
+# INSTALLED POSTCSS LANGUAGE SUPPORT TO RID @theme warning
+# INSTALLED TAIWIND CSS INTELLISENSE AS WELL
+
+# NOW FETCH DATA ON SERVER SIDE USING FETCHQUERY 4:15
+# NEXT GOES TO CONVEX A BACKEND SERVICE WITH OWN DB EXECUTES SERVER ()
+# BUT NO REACTIVE BENEFIT THIS WAY JUST FETCH DATA AND RETURN IT UNLESS
+# PRELOADING WHICH AUTO SUBSCRIBES TO DATA CHANGES
 # app(protected)/blog/page.tsx
 ```javascript
 // "use client"
@@ -2848,5 +2855,19 @@ export default async function BlogPage() {
 ...
 ```
 
-# INSTALLED POSTCSS LANGUAGE SUPPORT TO RID @theme warning
-# INSTALLED TAIWIND CSS INTELLISENSE AS WELL
+# FETCHING USING STREAMING 4:30
+# app/(shared-layout)/blog/page.tsx
+```javascript
+export default async function BlogPage() {
+    await new Promise((resolve) => setTimeout(resolve, 5000))
+```
+# ADD A LOADING PAGE - NOW IF YOU GO HOME THEN BLOG YOU WILL SEE LOADING
+# app/(shared-layout)/blog/loading.tsx
+```javascript
+export default function LoadingBlog() {
+    return (
+        <h1 className="text-3xl font-bold text-red-500 p-10">Loading...</h1>
+    )
+}
+```
+

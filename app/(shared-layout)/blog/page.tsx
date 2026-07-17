@@ -10,8 +10,10 @@ import { Key } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
+import { resolve } from "path";
 
 export default async function BlogPage() {
+    await new Promise((resolve) => setTimeout(resolve, 5000))
     // const posts = useQuery(api.posts.getPosts) 
     const posts = await fetchQuery(api.posts.getPosts);
     if (!posts) return <p>Loading...</p>;
