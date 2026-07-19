@@ -2547,7 +2547,7 @@ export async function POST(request: Request) {
 }
 ```
 # page.tsx sends title and content as JSON to /api/create-blog
-# throws on non-ok response still navigates home on success
+# throws non-ok response still navigates home on success
 # app/(protected)/create/page.tsx
 ```javascript
 ...
@@ -2649,7 +2649,7 @@ export default function BlogPage() {
 }
 ```
 # TEST AGAIN SHOULD SEE TITLE UNDER HELLO TEXT
-# FINISH UI 3:56
+# FINISH UI 3:56 RENDERING AN IMAGE 
 # app/(protected)/blog/page.tsx
 ```javascript
 "use client"
@@ -2687,12 +2687,14 @@ export default function BlogPage() {
 ```
 # TEST YOU WILL SEE A PHOTO FOR EVERY BLOG POSTS
 
-# UPDATEnextconfig.ts TO ADD HOSTNAME, PROTOCOL AND PORT
+# UPDATEnextconfig.ts TO ALLOW HOSTNAME, PROTOCOL AND PORT
 ```javascript
 import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   images: {
+    dangerouslyAllowSVG: true, // 👈 Enable this line
+    contentDispositionType: 'attachment', // Recommended  when enabling SVGs
     remotePatterns: [
       {
         hostname: 'ix-marketing.imgix.net',
@@ -2711,14 +2713,14 @@ export default nextConfig;
 ```javascript
 ...
 <Card key={post._id}>
-                        <div className="relative h-48 w-full overflow-hidden">
-                            <Image src="https://ix-marketing.imgix.net/bg-remove_after.png?auto=format,compress&w=688"
-                             alt="image"
-                            fill
-                             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                             className="rounded-t-lg"
-                            />
-                        </div>
+<div className="relative h-48 w-full overflow-hidden">
+<Image src="https://ix-marketing.imgix.net/bg-remove_after.png?auto=format,compress&w=688"
+   alt="image"
+  fill
+  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+  className="rounded-t-lg"
+/>
+</div>                        
 ...    
 ```                    
 
@@ -3035,4 +3037,654 @@ function SkeletonLoadingUi() {
     )
 }
 ...
-```'
+```
+
+# ALLOW USERS TO UPLOAD IMAGES 4:40
+# 1. Generate an upload URL using a mutation that calls storage.generateUploadUrl()
+# 2. Send a POST request with the file contents to the upload URL and recv storage ID
+# 3. Save the storage ID into your data model via another mutation
+# Client Request Upload -> NEXT generates API call -> Convex Get Presigned URL from
+# storage -> Goest back to Convex -> Goes to Client -> Client uploads on client side
+
+# UPDATE SCHEMA 4:45
+# convex/schemas.ts
+```javascript
+...
+imageStorageId: v.optional(v.id("_storage")),
+    })
+```
+
+# STEP 1 Gen an upload URL using a mutation that calls storage.generateUploadUrl()
+# convex/posts.ts
+```javascript
+...
+// Step 1 to upload images
+export const generateImageUploadUrl = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const user = await authComponent.safeGetAuthUser(ctx);
+        if (!user) {
+            throw new ConvexError("Not authenticated");
+        }
+        return await ctx.storage.generateUploadUrl();
+    }
+})
+```
+
+# STEP 2 Send POST req w/the file contents to the upload URL and recv storage ID
+# app/actions.ts
+```javascript
+...
+import { getToken } from "@lib/auth";
+...
+    const token = await getToken() 
+    try { 
+        // Check if image exists before using it
+        if (parsed.data.image) {
+            const imageUrl = await fetchMutation(
+                api.posts.generateImageUploadUrl,
+                {},
+                { token }
+            )
+            const uploadResult = await fetch(imageUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": parsed.data.image.type
+                },
+                body: parsed.data.image,
+            })
+        }
+    } catch {}  
+    if (!parsed.success) {
+        throw new Error("Something went wrong");
+    }
+    await fetchMutation(api.posts.createPost, {
+        body: parsed.data.content,
+        title: parsed.data.title,
+    },{ token }
+...
+```
+
+# app.(protected)/create/page.tsx 4:53
+```javascript
+...
+ const form = useForm<PostFormValues>({ 
+    resolver: zodResolver(postSchema),
+    defaultValues: {
+      content: "",
+      title: "",
+      image: undefined,
+...
+    <Controller
+      name="image"
+      control={form.control}
+      render={({ field, fieldState }) => (
+        <Field>
+        <FieldLabel>image</FieldLabel>
+        <Input
+          placeholder="Choose an image..."
+          aria-invalid={fieldState.invalid}
+          type="file"
+          accept="image/*"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+              field.onChange(file);
+            }}
+         /> 
+            {fieldState.error && <FieldError errors={[fieldState.error]} />}
+        </Field>
+```
+Moved redirect() Outside Try/Catch: Next.js redirect() works by throwing a specific 
+internal route error (NEXT_REDIRECT). If you place it inside a generic try/catch block, your 
+empty catch {} will intercept the redirect, silence it, and break your page routing.
+Fixed Extraneous Imports: Removed import { useForm } from "react-hook-form". React Hook Form is a 
+client-side state machine. It has no business being inside a "use server" module file.
+Fixed Broken Logic and Missing Brackets: Original snippet opened a block for image uploads, but 
+accidentally nested the final createPost mutation entirely inside that if (parsed.data.image) block. 
+Posts without images would have never saved to your database. Safe Error Feedback: Swapped generic 
+runtime errors (throw new Error) with clean object returns (return { error: "..." }). Server actions 
+should safely return error states to the UI so users don't face a crashed white-screen app.
+# app/actions.ts
+```javascript
+"use server"
+import { postSchema } from "@schemas/blog";
+import z from "zod";
+import { fetchMutation } from "convex/nextjs";
+import { api } from "@convex/_generated/api";
+import { useForm } from "react-hook-form";
+import { redirect } from "next/navigation";
+import { getToken } from "@lib/auth";
+type PostFormValues = z.infer<typeof postSchema>;
+export async function CreateBlogAction(values: PostFormValues) {
+  // 1. Fail early if validation fails
+  const parsed = postSchema.safeParse(values);
+  if (!parsed.success) {
+    return { error: "Invalid form data fields provided." };
+  }
+  try {
+    const token = await getToken();
+    let storageId: string | undefined;
+    // 2. Handle image upload if a file exists
+    if (parsed.data.image) {
+      const imageUrl = await fetchMutation(api.posts.generateImageUploadUrl, {}, { token });
+      const uploadResult = await fetch(imageUrl, {
+        method: "POST",
+        headers: { "Content-Type": parsed.data.image.type },
+        body: parsed.data.image,
+      });
+      if (!uploadResult.ok) {
+        return { error: "Failed to upload image to storage provider." };
+      }
+      const data = await uploadResult.json();
+      storageId = data.storageId;
+    }
+    // 3. Create the post (Passing storageId if it exists)
+    await fetchMutation(
+      api.posts.createPost,
+      {
+        title: parsed.data.title,
+        body: parsed.data.content,
+        // imageStorageId: storageId, // <- Ensure your mutation accepts this!
+      },
+      { token }
+    );
+  } catch (error) {
+    // 4. Log the real issue for debugging, but don't leak details to client
+    console.error("Blog creation failed:", error);
+    return { error: "An unexpected error occurred while creating your post." };
+  }
+  // 5. Next.js redirects MUST happen outside the try/catch block
+  redirect("/blog");
+}
+```
+
+# UPDATE CREATE POSTS ARGUMENTS
+# convex/posts.ts
+```javascript
+import { mutation, query } from "./_generated/server";
+import { ConvexError, v } from "convex/values";
+import { authComponent } from "./auth";
+export const searchPosts = query({
+    args: {
+        term: v.string(),
+        limit: v.number(),
+    },
+    handler: async (ctx, args) => {
+        const normalizedTerm = args.term.trim().toLowerCase();
+        if (!normalizedTerm) {
+            return [];
+        }
+        const posts = await ctx.db.query("posts").collect();
+        return posts
+            .filter((post) => {
+                const searchableText = `${post.title} ${post.body}`.toLowerCase();
+                return searchableText.includes(normalizedTerm);
+            })
+            .slice(0, args.limit)
+            .map((post) => ({
+                _id: post._id,
+                title: post.title,
+                body: post.body,
+                // creationTime: post_creationTime,
+            }));
+    },
+});
+// Create a new blog article with the given title and body.
+export const createPost = mutation({
+    args: {
+        title: v.string(),
+        body: v.string(),
+        // optional storage id validation
+        imageStorageId: v.optional(v.id("_storage"))
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        const user = identity ? await authComponent.safeGetAuthUser(ctx) : undefined;
+
+        if (!identity || !user) {
+            throw new ConvexError("User not authenticated");
+        }
+
+        const blogArticle = await ctx.db.insert("posts", {
+            title: args.title,
+            body: args.body,
+            authorId: user?._id,
+            imageStorageId:  args.imageStoreageId
+
+        });
+
+        return blogArticle;
+    },
+});
+export const clearPosts = mutation({
+ // args: {title: v.string(), body: v.string(), imageStorageId: v.id("_storage")},
+  args: {},
+  handler: async (ctx) => {
+    const posts = await ctx.db.query("posts").collect();
+    for (const post of posts) {
+      await ctx.db.delete(post._id);
+    }
+    return { deleted: posts.length };
+  },
+});
+export const getPosts = query({
+    args: {},
+    handler: async (ctX) => {
+        const posts = await ctX.db.query('posts').order('desc').collect();
+        return posts;
+    }
+})
+// Step 1 to upload images
+export const generateImageUploadUrl = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const user = await authComponent.safeGetAuthUser(ctx);
+        if (!user) {
+            throw new ConvexError("Not authenticated");
+        }
+        return await ctx.storage.generateUploadUrl();
+    }
+})
+```
+
+# FIX FOR ERROR (property) imageStorageId?: Id<"_storage"> | undefined: 
+# app/actions.ts
+# // 1. IMPORT THE ID TYPE FROM CONVEX
+# import { Id } from "@convex/_generated/dataModel";
+# // 2. UPDATE TYPE TO EXPECT THE CONVEX STORAGE ID
+#    let storageId: Id<"_storage"> | undefined;
+```javascript
+...
+import { getToken } from "@lib/auth";
+// 1. IMPORT THE ID TYPE FROM CONVEX
+import { Id } from "@convex/_generated/dataModel";
+// type PostFormValues = z.infer<typeof postSchema>;
+// export async function CreateBlogAction(values: PostFormValues) {
+//   // 1. Fail early if validation fails
+//   const parsed = postSchema.safeParse(values);
+//   if (!parsed.success) {
+//     return { error: "Invalid form data fields provided." };
+//   }
+  export async function CreateBlogAction(formData: FormData) {
+  // Extract values from FormData
+  const rawValues = {
+    title: formData.get("title"),
+    content: formData.get("content"),
+    image: formData.get("image"), // This will now correctly be a File object
+  };
+ // 1.Safely parse with your Zod schema  Fail early if validation fails
+  const parsed = postSchema.safeParse(rawValues);
+  if (!parsed.success) {
+    return { error: "Invalid form data fields provided." };
+  }
+  try {
+    const token = await getToken();
+     let storageId: Id<"_storage"> | undefined;
+    // 2. Handle image upload URL from Convex if a file exists
+    if (parsed.data.image  && parsed.data.image.size > 0) {
+      const file = parsed.data.image; // Type: File
+      const imageUrl = await fetchMutation(api.posts.generateImageUploadUrl, {}, { token });
+       // Upload the raw binary stream
+      const uploadResult = await fetch(imageUrl, {
+        method: "POST",
+        // headers: { "Content-Type": parsed.data.image.type },
+        // body: parsed.data.image,
+        headers: { "Content-Type": file.type },
+        body: file, // Works perfectly now because it's a real File instance
+      });
+      if (!uploadResult.ok) {
+        return { error: "Failed to upload image to storage provider." };
+      }
+      const data = await uploadResult.json();
+      storageId = data.storageId as Id<"_storage">;
+    }
+    // 3. Create the post (Passing storageId if it exists)
+    await fetchMutation(
+    ...
+```
+
+# HAD TO UPDATE POST FORM FILE
+# You need to replace your fetch logic inside onSubmit to use FormData. 
+# This will bundle the text inputs and the raw file together so your server can read it.
+# app/(created)/create/page.tsx
+```javascript
+...
+async function onSubmit(values: PostFormValues) {
+  try {
+    // 1. Create a FormData instance instead of an object
+    const formData = new FormData();
+    formData.append("title", values.title);
+    formData.append("content", values.content);
+
+    // 2. Append the file safely if it exists
+    if (values.image) {
+      formData.append("image", values.image);
+    }
+  form.reset()
+   startTransition(async() => {
+          // Send the FormData  to ROUTE HANDLER
+          console.log("This runs on the client side - ROUTE HANDLER")
+          const response = await fetch('/api/create-blog', {
+            method: "POST",
+            body: formData,
+          });
+```
+
+Since you are calling fetch('/api/create-blog') from this form, you are using 
+a Route Handler instead of the Server Action (CreateBlogAction).
+You need to make sure your API route file—likely located at 
+# app/api/create-blog/route.ts — is also ready to read FormData instead of req.json().
+Here is why the image wasn't reaching your Convex database: your route handler is 
+strictly parsing the incoming request as raw JSON string data via await request.json().
+Because your frontend form is now sending a multipart FormData container holding 
+the binary image file, parsing it as standard JSON will throw a runtime exception.
+The Fix:
+You need to update your route handler file (app/api/create-blog/route.ts) to read 
+the data using request.formData(). Then, execute your Convex file upload logic 
+sequentially right inside this route block before passing the final storageId 
+into your createPost mutation.
+# app/api/create-blog/route.ts
+```javascript
+...
+import { Id } from "@/convex/_generated/dataModel";
+export async function POST(request: Request) {
+  try {
+    // 1. Read request payload as FormData instead of JSON
+    const formData = await request.formData();
+    const title = formData.get("title");
+    const content = formData.get("content");
+    const imageFile = formData.get("image") as File | null;
+    // Validate your text fields
+    if (typeof title !== "string" || typeof content !== "string") {
+      return NextResponse.json(
+        { success: false, error: "Missing title or content" },
+        { status: 400 },
+      );
+    }
+    let storageId: Id<"_storage"> | undefined;
+    // 2. Handle image upload if a valid binary file exists
+    if (imageFile && imageFile.size > 0) {
+       // Get the single-use upload endpoint string from Convex
+       const uploadUrl = await fetchAuthMutation(api.posts.generateImageUploadUrl, {});
+      // Stream the binary payload directly into Convex Storage
+      const uploadResult = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": imageFile.type },
+        body: imageFile,
+      });
+      if (!uploadResult.ok) {
+        return NextResponse.json(
+          { success: false, error: "Failed to upload file to storage" },
+          { status: 500 },
+        );
+      }
+      // Extract and strongly cast the unique storage identity reference
+      const data = await uploadResult.json();
+      storageId = data.storageId as Id<"_storage">;
+    }
+    // 3. Persist the final document to your Convex Database
+    const post = await fetchAuthMutation(api.posts.createPost, {
+      title,
+      body: content,
+      imageStorageId: storageId, // This field maps to your schema layout
+    });
+    return NextResponse.json({ success: true, post });
+  } catch (error) {
+    console.error("Error creating post:", error);
+    return NextResponse.json(
+      { success: false, error: String(error) },
+      { status: 500 },
+    );
+  }
+```
+
+Because your Route Handler defines the input parameters with the standard 
+web standard Request type, TypeScript throws a compilation type error when 
+you try to pass it to the library.The FixOpen your API Route Handler file 
+(app/api/create-blog/route.ts) and change the imported request type parameter 
+from Request to NextRequest.Here is exactly how to clean up your file to fix 
+the type mismatch instantly:
+
+
+# TEST AND CHECK FOR FILES ON CONVEX WEB PAGE 5:00
+# FETCH IMAGE - RETURN URLs ALONG WITH OTHER DATA FROM QUERIES A MUTATIONS
+#
+# open your next.config.js file and enable dangerouslyAllowSVG:javascript
+# convex/posts.ts
+```javascript
+...
+
+export const getPosts = query({
+    args: {},
+    handler: async (ctX) => {
+        const posts = await ctX.db.query('posts').order('desc').collect();
+        return await Promise.all(
+            posts.map(async (post) => {
+                const resolvedImageUrl = post.imageStorageId !== undefined ?
+                await ctX.storage.getUrl(post.imageStorageId) : null
+                return {
+                    ...post,
+                    imageUrl: resolvedImageUrl,
+                }
+            })
+        )
+        return posts;
+    }
+})
+```
+
+# NOW WE CAN UPDATE THE IMAGE URL WITH post.imageUrl in blog/page.tsx
+# app/(shared-layout)/blog/page.tsx
+```javascript
+...
+                <Card className="pt-0" key={post._id}>
+                    <div className="relative h-48 w-full overflow-hidden">
+                        <Image 
+                            src={post.imageUrl ?? 
+                                "https://ix-marketing.imgix.net/footer-image.png?ixembed=1731958278380&auto=format,compress"
+                            }
+                            alt="image"
+                            fill
+...
+```
+
+# WHITE LIST  ANY WEBSITES IN next.config.js
+
+# FIX IMAGE PLACE HOLDER IN BLOG PAGE BY CHANGE ?? TO ||
+# app/(chared-layout)/blog/page.tsx
+...
+export default function BlogPage() {
+  return (
+    <div className="py-12 px-4 max-w-7xl mx-auto">
+ #                           
+ # Add the users table to your schema file so that the 
+ # authorId: v.id("user") field has a valid table to reference.
+ # convex/schema.ts
+```javascript
+ ...
+  // authorId: v.string(),
+        authorId: v.id("user), // Connects posts directly to their creator
+        imageStorageId: v.optional(v.id("_storage")),
+    }),
+   ble to handle user registration data
+  users: defineTable({
+    name: v.string(),
+    email: v.string(),
+    tokenIdentifier: v.string(), // Matches external auth identifiers (like Clerk/Auth0)
+  }).index("by_token", ["tokenIdentifier"]), // Speeds up user lookup queries
+}); 
+```
+
+# CREATED A SEARCH BAR
+Index Queries: The user schema includes an index pattern ["tokenIdentifier"]. 
+This makes auth checks inside your server execution blocks lightning fast instead 
+of forcing the engine to scan the entire data collection.Network Throttling: T
+he debouncer prevents hitting your database cluster layout on every character 
+keypress, safeguarding your usage metrics.
+# components/ui/blog-search-bar.tsx
+```javascript
+"use client";
+import { useState, useEffect } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Input } from "@/components/ui/input";
+import Link from "next/link";
+import Image from "next/image";
+export function BlogSearchBar() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedTerm, setDebouncedTerm] = useState("");
+  // Debounce logic: delays network requests until typing pauses for 300ms
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedTerm(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+  // Hook handles active state querying automatically 
+  const results = useQuery(
+    api.posts.searchPosts,
+    debouncedTerm ? { term: debouncedTerm, limit: 5 } : "skip"
+  );
+  return (
+    <div className="relative w-full max-w-md mx-auto mb-8">
+      <Input
+        type="search"
+        placeholder="Search articles..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="w-full"
+      />
+      {/* Floating search dropdown panel */}
+      {searchTerm && results && results.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-popover text-popover-foreground border rounded-md shadow-lg z-50 overflow-hidden">
+          {results.map((post) => (
+            <Link
+              key={post._id}
+              href={`/blog/${post._id}`}
+              className="flex items-center gap-3 p-3 hover:bg-muted transition-colors border-b last:border-0"
+            >
+              {post.imageUrl && (
+                <div className="relative w-12 h-12 rounded overflow-hidden flex-shrink-0">
+                  <Image
+                    src={post.imageUrl}
+                    alt={post.title}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              )}
+              <div className="overflow-hidden">
+                <h4 className="font-semibold truncate text-sm">{post.title}</h4>
+                <p className="text-xs text-muted-foreground truncate">{post.body}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+# UPDATE BLOG PAGE LAYOUT FOR SEARCHBAR
+# app.(shared-layout)/blog/page.tsx
+```javascript
+...
+export function BlogSearchBar() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedTerm, setDebouncedTerm] = useState("");
+...
+{/* ADDED: Mounted search engine directly into layout flow */}
+      <div className="pb-8">
+        <BlogSearchBar />
+      </div>
+
+      <Suspense fallback={<SkeletonLoadingUi />}>
+        <LoadBlogList />
+      </Suspense>
+
+```
+
+# ADD DYNAMIC FILE SO SEARCH WORKS
+# app/blog/[id]/page.tsx
+```javascript
+import { fetchQuery } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
+import { notFound } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
+import { Id } from "@/convex/_generated/dataModel";
+interface PostPageProps {
+  params: Promise<{ id: string }>;
+}
+export default async function BlogPostPage({ params }: PostPageProps) {
+  const resolvedParams = await params;
+  try {
+    // Safely cast string param to Convex database ID layout
+    const post = await fetchQuery(api.posts.getPostById, { 
+      id: resolvedParams.id as Id<"posts"> 
+    });
+    if (!post) {
+      notFound();
+    }
+    const imgSource = post.imageUrl || "https://imgix.net";
+    return (
+      <article className="container mx-auto max-w-3xl px-4 py-12">
+        <Link href="/blog" className={buttonVariants({ variant: "ghost", className: "mb-6" })}>
+          ← Back to blogs
+        </Link>
+        <h1 className="text-4xl font-extrabold tracking-tight mb-4">{post.title}</h1>
+        <div className="relative w-full h-96 my-6 rounded-xl overflow-hidden bg-muted">
+          <Image
+            src={imgSource}
+            alt={post.title}
+            fill
+            className="object-cover"
+            priority
+          />
+        </div>
+        <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap text-lg leading-relaxed mt-6">
+          {post.body}
+        </div>
+      </article>
+    );
+  } catch (error) {
+    console.error(error);
+    notFound();
+  }
+}
+```
+
+# ADD getPostByID
+# convex/post.ts
+```javascript
+// Ensure this is saved inside convex/posts.ts
+export const getPostById = query({
+  args: { id: v.id("posts") },
+  handler: async (ctx, args) => {
+    const post = await ctx.db.get(args.id);
+    if (!post) return null;
+    const imageUrl = post.imageStorageId 
+      ? await ctx.storage.getUrl(post.imageStorageId) 
+      : null;
+    return {
+      ...post,
+      imageUrl,
+    };
+  },
+});
+```
+
+# UPDATE USER ID IN CONVEX/POSTS.TS
+# Using as any during the database write is a clean workaround.  It satisfies the TypeScript
+# compiler immediately while preserving your relationadata structures for future lookups.
+# convex/posts.ts
+```javascript
+...
+const blogArticle = await ctx.db.insert("posts", {
+      title: args.title,
+      body: args.body,
+      authorId: user?._id  
+      imageStorageId: args.imageStorageId,
+    });
+    return blogArticle;
+...
+```

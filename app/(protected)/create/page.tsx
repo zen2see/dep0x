@@ -29,6 +29,7 @@ export default function CreateRoute() {
     defaultValues: {
       content: "",
       title: "",
+      image: undefined,
     },
   });
 
@@ -46,20 +47,31 @@ export default function CreateRoute() {
       // You also will get a message from the console.log of app/actions.ts
       // SERVER ACTION
       // await CreateBlogAction()
+       // 1. Create a FormData instance instead of an object
+      const formData = new FormData();
+      formData.append("title", values.title);
+      formData.append("content", values.content);
+      // 2. Append the file safely if it exists
+      if (values.image) {
+        formData.append("image", values.image);
+      }
       form.reset(); 
       setTimeout(() => {
         startTransition(async() => {
-          // ROUTE HANDLER
-          console.log("Hey this runs on the client side - ROUTE HANDLER")
+          // Send the FormData  to ROUTE HANDLER
+          console.log("This runs on the client side - ROUTE HANDLER")
           const response = await fetch('/api/create-blog', {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              title: values.title,
-              content: values.content,
-            }),
+            // NOTE: Do NOT set "Content-Type" headers when sending FormData.
+            // The browser needs to automatically calculate the boundary strings.
+            // headers: {
+            //   "Content-Type": "application/json",
+            // },
+            // body: JSON.stringify({
+            //   title: values.title,
+            //   content: values.content,
+            // }),
+            body: formData,
           });
           const result = await response.json();
           if (!response.ok || !result.success) {
@@ -105,7 +117,8 @@ export default function CreateRoute() {
                 render={({ field, fieldState }) => (
                   <Field>
                     <FieldLabel>Title</FieldLabel>
-                    <Input placeholder="Enter a catchy title" aria-invalid={fieldState.invalid} {...field} />
+                    <Input placeholder="Enter a catchy title" 
+                           aria-invalid={fieldState.invalid} {...field} />
                     {fieldState.error && <FieldError errors={[fieldState.error]} />}
                   </Field>
                 )}
@@ -117,7 +130,29 @@ export default function CreateRoute() {
                 render={({ field, fieldState }) => (
                   <Field>
                     <FieldLabel>Content</FieldLabel>
-                    <Textarea placeholder="Write your blog content here..." rows={6} aria-invalid={fieldState.invalid} {...field} />
+                    <Textarea placeholder="Write your blog content here..." rows={6} 
+                               aria-invalid={fieldState.invalid} {...field} />
+                    {fieldState.error && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
+
+              <Controller
+                name="image"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel>image</FieldLabel>
+                    <Input
+                      placeholder="Choose an image..."
+                      aria-invalid={fieldState.invalid}
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        field.onChange(file);
+                      }}
+                    /> 
                     {fieldState.error && <FieldError errors={[fieldState.error]} />}
                   </Field>
                 )}

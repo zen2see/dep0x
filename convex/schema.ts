@@ -6,5 +6,14 @@ export default defineSchema({
         title: v.string(),
         body: v.string(),
         authorId: v.string(),
-    })
+        // horId: v.id("user"), // Connects posts directly to their creator
+        imageStorageId: v.optional(v.id("_storage")),
+    }),
+
+// Table to handle user registration data
+  users: defineTable({
+    name: v.string(),
+    email: v.string(),
+    tokenIdentifier: v.string(), // Matches external auth identifiers (like Clerk/Auth0)
+  }).index("by_token", ["tokenIdentifier"]), // Speeds up user lookup queries
 })  
