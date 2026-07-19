@@ -20,7 +20,7 @@ export default function ProtectedLayout({
   useEffect(() => {
     if (!isAuthLoading && !session) {
       toast.error("Please sign in to access this page.");
-      router.push("/auth/login");
+      router.push("/auth/blog")
     }
   }, [session, isAuthLoading, router]);
 

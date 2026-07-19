@@ -3688,3 +3688,28 @@ const blogArticle = await ctx.db.insert("posts", {
     return blogArticle;
 ...
 ```
+
+# CACHING 5:05
+# Static Rendering - routes are rendered at build time or in bckgrd after revalidation/Full Rute Cche
+# Dynamic Rendering - Done at request time
+# pnpm run build - Create local build you will see items listed 0 means static f means dynamic
+
+# Route Segment Options - allow you to configure layout behavior 
+# AUTO (default) cache as much as possible  w/out preventing components opting to dynamic behavior
+# SORCE DYNAMIC - routes rendered at request time
+# ERROR - forces static rendering and cache the data of a layout or page by causing an error
+# FORCE STATIC - rendering + cache data of layout/page  by forcing cookies, headers() + useSearchParams()
+# to empty values - EXAMPLE
+# app/(shared-layout)/blog/page.ts
+```javascript
+...
+import { BlogSearchBar } from "@/components/ui/blog-search-bar"; 
+...
+export const dynamic = "force-static";
+```
+# But no fresh data until apps is rebuilt or revalidated
+# REVALIDAT: TIME BASED = export const revalidate = 30;
+#             EVENT BASED = revalidatepath("/blog")
+
+# CREATE A DYNAMIC ROUTE 5:25
+# app/(shared-layout)/blog/[postId]
