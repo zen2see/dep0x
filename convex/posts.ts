@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import { ConvexError, v } from "convex/values";
+import { ConvexError, convexToJson, v } from "convex/values";
 import { authComponent } from "./auth";
 
 export const searchPosts = query({
@@ -107,20 +107,17 @@ export const generateImageUploadUrl = mutation({
   }
 });
 
-// Ensure this is saved inside convex/posts.ts
 export const getPostById = query({
-  args: { id: v.id("posts") },
+  args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
-    const post = await ctx.db.get(args.id);
+    const post = await ctx.db.get(args.postId);
     if (!post) return null;
-
-    const imageUrl = post.imageStorageId 
+    const resolvedImageUrl = post.imageStorageId 
       ? await ctx.storage.getUrl(post.imageStorageId) 
       : null;
-
     return {
       ...post,
-      imageUrl,
+      imageUrl: resolvedImageUrl
     };
   },
 });
