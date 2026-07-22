@@ -9,6 +9,12 @@ export default defineSchema({
         // horId: v.id("user"), // Connects posts directly to their creator
         imageStorageId: v.optional(v.id("_storage")),
     }),
+    comments: defineTable({
+      postId: v.id("posts"),
+      authorId: v.string(),
+      authorName: v.string(),
+      body: v.string()
+    }),
 
 // Table to handle user registration data
   users: defineTable({

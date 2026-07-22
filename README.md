@@ -3807,5 +3807,211 @@ export const getPostById = query({
     };
   },
 });
-
 ```
+
+# CREATE COMMENTS SECTION 5:45
+# convxe/schema.ts
+```javascript
+...
+export default defineSchema({
+  ...
+}),
+comments: defineTable({
+  postId: v.id("posts"),
+  authorId: v.string(),
+  authorName: v.string(),
+  body: v.string()
+}),
+```
+# VERIFY YOU SEE COMMENTS TABLE IN CONVEX WEB UI
+
+# NOW DEFINE A QUERY 5:46
+# convex/comments.ts
+```javascript
+ import { mutation, query } from "./_generated/server"
+import { convexToJson, v } from "convex/values"
+export const getCommentsByPostsId = query({
+    args: {
+        postId: v.id("posts"),
+    },
+    handler: async (ctx, args) => {
+        const data = await ctx.db
+            .query("comments")
+            .filter((q) => q.eq(q.field("postId"), args.postId)) 
+            .order("desc")
+            .collect()
+        return data;
+    },
+})
+export const createComment = mutation({
+    args: {
+        body: v.string(),
+        postId: v.id("posts"),
+    },
+    handler: async (ctx, args) => {
+        const user = await authComponent.safeGetAuthUser(ctx)
+        if (!user) {
+            throw new ConvexError("Not authenticated")
+        }
+        return await ctx.db.insert("comments", {
+            postId: args.postId,
+            body: args.body,
+            authorId: user._id,
+            authorName: user.name,
+        })
+    }
+})
+```
+
+# ADD PLACEHOLDER
+# app/(shared-layout)/blog/page.tsx
+```javascript
+...
+    <CommentSection />
+    </div>
+  );
+}
+```
+
+# CREATE A NEW SCHEMA
+# app/schemas/comment.ts
+```javascript
+import { Id } from "@/convex/_generated/dataModel"
+import z from "zod"
+export const commentSchema = z.object({
+    body: z.string().min(3),
+    postId: z.custom<Id<"posts">>(),
+})
+```
+
+# CREATE THE COMMENTS SECTION
+# ../components/web/CommentSection.tsx
+```javascript
+"use client"
+import { Loader2, MessageSquare } from "lucide-react";
+import { Card, CardContent, CardHeader } from "../ui/card";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { commentSchema } from "@/app/schemas/comments";
+import { Controller, useForm } from "react-hook-form";
+import { Field, FieldError, FieldLabel } from "../ui/field";
+import { Textarea } from "../ui/textarea";
+import { Button } from "../ui/button";
+import { api } from "@/convex/_generated/api";
+import { useMutation } from "convex/react"
+import { Id } from "@/convex/_generated/dataModel";
+import z from "zod";
+import { toast } from "sonner";
+import { useTransition } from "react";
+interface CommentSectionProps {
+  postId: Id<"posts">;
+}
+export function CommentSection({ postId }: CommentSectionProps) {
+  const [isPending, startTransition] = useTransition();
+  const createComment = useMutation(api.comments.createComment);
+  const form = useForm({
+    resolver: zodResolver(commentSchema),
+    defaultValues: {
+      body: "",
+      postId: postId,
+    }
+  });
+  async function onSubmit(data: z.infer<typeof commentSchema>) {
+    startTransition(async () => {
+      try {
+        await createComment(data);
+        form.reset({ body: "", postId: postId });
+        toast.success("Comment has been created");
+      }
+      catch (error) {
+        console.error("Error posting comment:", error);
+        toast.error("Failed to post comment");
+      }
+    });
+  }
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center gap-2 border-b">
+        <MessageSquare className="size-5" />
+        <h2 className="text-xl font-bold">5 Comments</h2>
+      </CardHeader>
+      <CardContent>
+        <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+          <Controller
+            name="body"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field>
+                <FieldLabel>Full Name</FieldLabel>
+                <Textarea
+                  aria-invalid={fieldState.invalid}
+                  placeholder="Share your thoughts"
+                  {...field}
+                />
+                {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+              </Field>
+            )}
+          />
+          <Button 
+            type="submit"
+            disabled={isPending} 
+            className={isPending ? "bg-orange-500 hover:bg-orange-600 text-white" : ""}
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                  <span>Loading...</span>
+              </>
+            ) : (
+              <span>Submit</span>
+            )}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+# UPDATING METADATA TAGS 6:37 - GOOD FOR SCO SCORE
+# VIEW BLOG PAGE HOVER OVER TAB TO SEE TITLE
+# DEV TOOLS - ELEMENTS OF THE HEAD TAG TO SEE ALL TAGS
+# app/(shared-layout)/blog/page.tsx
+```javascript
+...
+import { Metadata } from "next";
+...
+export const dynamic = "force-dynamic";
+...
+export const metadata: Metadata = {
+  title: 'Blog | Next.js v16',
+  description: 'Read latest insights',
+  category: 'full stack web dev'
+  authors: [{name: 'zen2see'}]
+}
+```
+
+# YOU CAN GENERATE METADATA AUTO WITH generateMetadata() 4:44
+# app/(share-layout)/blog/[postId]/page.tsx
+```javascript
+...
+import { Metadata } from "next";
+interface PostIdRouteProps { params: Promise<{ postId: Id<'posts'>}> }
+export async function generateMetadata({ params }: PostIdRouteProps): 
+Promise<Metadata> {
+  const { postId } = await params
+  const post = await fetchQuery(api.posts.getPostById, { postId: postId })
+  if (!post) {
+    return {
+      title: "Post not found",
+    }
+  }
+  return {
+    title: post.title,
+    description: post.body,
+  }
+}
+```
+
+# IMPLEMENT PRESENSE (DHOW WHO IS ON LINE) 6:47

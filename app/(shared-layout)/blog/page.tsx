@@ -7,8 +7,22 @@ import { buttonVariants } from "@/components/ui/button";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { BlogSearchBar } from "@/components/ui/blog-search-bar"; 
+import { Metadata } from "next";
+import { Id } from "@/convex/_generated/dataModel";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: 'Blog | Next.js v16',
+  description: 'Read latest insights',
+  category: 'full stack web dev',
+  authors: [{name: 'zen2see'}]
+}
+interface PostIdRouteProps {
+  params: Promise<{
+    postId: Id<"posts">
+  }>
+}
 
 export default function BlogPage() {
   return (

@@ -7,12 +7,30 @@ import { fetchQuery } from "convex/nextjs";
 import { Id } from "@/convex/_generated/dataModel";
 import { notFound } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
+import { CommentSection } from "@/components/web/CommentSection";
+import { Metadata } from "next";
 
 interface PostIdRouteProps { params: Promise<{ postId: Id<'posts'>}> }
+
+export async function generateMetadata({ params }: PostIdRouteProps): 
+Promise<Metadata> {
+  const { postId } = await params
+  const post = await fetchQuery(api.posts.getPostById, { postId: postId })
+  if (!post) {
+    return {
+      title: "Post not found",
+    }
+  }
+  return {
+    title: post.title,
+    description: post.body,
+  }
+}
 
 export default async function PostIdRoute ({ params }: PostIdRouteProps) {
   const { postId } = await params;
   const post = await fetchQuery(api.posts.getPostById, { postId: postId });
+
 
   // Handle case where post is not found or has no title
   if (!post || !post.title) {
@@ -25,7 +43,7 @@ export default async function PostIdRoute ({ params }: PostIdRouteProps) {
 
   return (
     <div className="max-w-3xl mx-auto py-8 px-4 animate-in fade-in duration-500 relative">
-      <Link className={buttonVariants({ variant: "ghost", className: "mb-6" })} href="/blog">
+      <Link className={buttonVariants({ variant: "outline", className: "mb-6" })} href="/blog">
         <ArrowLeft className="mr-2 size-4" />
         Back to blog
       </Link>
@@ -51,6 +69,8 @@ export default async function PostIdRoute ({ params }: PostIdRouteProps) {
       </p>
 
       <Separator className="my-8" />
+
+      <CommentSection key={postId} postId={postId} />
     </div>
   );
 }
