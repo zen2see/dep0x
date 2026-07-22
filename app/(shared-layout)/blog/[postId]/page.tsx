@@ -3,12 +3,14 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { api } from "@/convex/_generated/api";
-import { fetchQuery } from "convex/nextjs";
+import { fetchQuery, preloadQuery } from "convex/nextjs";
 import { Id } from "@/convex/_generated/dataModel";
 import { notFound } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { CommentSection } from "@/components/web/CommentSection";
 import { Metadata } from "next";
+import { PostPresence } from "@/components/web/PostPresence";
+import { getToken } from "@/lib/auth";
 
 interface PostIdRouteProps { params: Promise<{ postId: Id<'posts'>}> }
 
@@ -29,8 +31,16 @@ Promise<Metadata> {
 
 export default async function PostIdRoute ({ params }: PostIdRouteProps) {
   const { postId } = await params;
-  const post = await fetchQuery(api.posts.getPostById, { postId: postId });
+  const token = await getToken();
+  // const post = await fetchQuery(api.posts.getPostById, { postId: postId });
 
+   const [ post, preloadedComments, userId] = await Promise.all([
+    await fetchQuery(api.posts.getPostById, { postId: postId }),
+    await preloadQuery(api.comments.getCommentsByPostsId, {
+      postId: postId,
+    }),
+    await fetchQuery(api.presence.getUserId, {}, { token })
+  ])
 
   // Handle case where post is not found or has no title
   if (!post || !post.title) {
@@ -67,6 +77,7 @@ export default async function PostIdRoute ({ params }: PostIdRouteProps) {
        <p className="text-sm text-muted-foreground">
         Posted on: {new Date(post._creationTime).toLocaleDateString("en-US")}
       </p>
+      {userId && <PostPresence roomId={post._id} userId={userId} />}
 
       <Separator className="my-8" />
 

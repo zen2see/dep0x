@@ -3992,7 +3992,7 @@ export const metadata: Metadata = {
 }
 ```
 
-# YOU CAN GENERATE METADATA AUTO WITH generateMetadata() 4:44
+# YOU CAN GENERATE METADATA AUTO WITH generateMetadata() 6:44
 # app/(share-layout)/blog/[postId]/page.tsx
 ```javascript
 ...
@@ -4014,4 +4014,184 @@ Promise<Metadata> {
 }
 ```
 
-# IMPLEMENT PRESENSE (DHOW WHO IS ON LINE) 6:47
+# IMPLEMENT PRESENCE (DHOW WHO IS ON LINE) 6:47
+# pnpm i @convex-dev/presence
+
+# ADD COMPONENT TO COVEX CONFIG
+# ../convex/convex.config.ts
+```javascript
+...
+import presence from "@convex-dev/presence/convex.config";
+...
+app.use(presence);
+```
+
+# CONVEX COMPONENTS PACKAGE UP CODE AND DATA IN A SANDBOX THAT ALLOWS YOU 
+# TO CONFIDENTLY AND QUICKLY ADD NEW FEATURES TO YOUR BACKEND
+# ../onvex/presence.ts
+```javascript
+import { mutation, query } from "./_generated/server"
+import { components } from "./_generated/api"
+import { v } from "convex/values"
+import { Presence } from "@convex-dev/presence"
+import { authComponent } from "./auth"
+export const presence = new Presence(components.presence)
+export const heartbeat = mutation({
+    args: {
+        roomId: v.string(),
+        userId: v.string(),
+        sessionId: v.string(),
+        interval: v.number(),
+    },
+    handler: async (ctx, { roomId, userId, sessionId, interval }) => {
+        // TODO: Add your auth check here
+        return await presence.heartbeat(ctx, roomId, userId, sessionId, interval)
+    },
+})
+export const list = query({
+    args: { roomToken: v.string() },
+    handler: async (ctx, { roomToken })=> {
+        // Avoid adding per-user reads so all subscription can share same cache
+        return await presence.list(ctx, roomToken)
+    }
+})
+export const disconnect = mutation({
+    args: { sessionToken: v.string() },
+    handler: async (ctx, { sessionToken }) => {
+        // can't check auth here bc it's called over http from sendBeacon
+        return await presence.disconnect(ctx, sessionToken)
+    }
+})
+
+```
+# IMPLEMENT IN FRONT END
+# ../components/web/PostPresence.tsx
+```javascript
+"use client"
+import { api } from "@convex/_generated/api"
+import usePresence from "@convex-dev/presence/react"
+import { Id } from "@convex/_generated/dataModel"
+import FacePile from "@convex-dev/presence/facepile"
+interface iAppProps {
+    roomId: Id<"posts">
+    userId: string
+}
+export function PostPresence({ roomId, userId}: iAppProps) {
+    const presenceState = usePresence(api.presence, roomId, userId)
+    if (!presenceState || presenceState.length == 0) {
+        return null
+    }
+    return (
+        <div className="flex items-center gap-2">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Viewing now
+            </p> 
+            <div className="text-black">
+                <FacePile presenceState={presenceState} />
+            </div>
+        </div>
+    )
+}
+```
+
+# UPDATE PRESENCE FILE WITH GETUSER()
+# ../onvex/presence.ts
+```javascript
+...
+export const  getUserId = query({
+    args: {},
+    handler: async (ctx) => { 
+        const user = await authComponent.safeGetAuthUser(ctx)
+        return user?._id
+    }
+})
+```
+
+
+# RENDER IT IN THE POST-ID ROUTE AND FETCH USER FROM POSTIDROUTE
+# app.(shared-layout)/blog/[postId]/page.tsx
+```javascript
+...
+import { PostPresence } from "@/components/web/PostPresence";
+import { getToken } from "@/lib/auth";
+const token = await getToken();
+...
+export default async function PostIdRoute ({ params }: PostIdRouteProps) {
+  const { postId } = await params;
+  const token = await getToken();
+  // const post = await fetchQuery(api.posts.getPostById, { postId: postId });
+
+   const [ post, preloadedComments, userId] = await Promise.all([
+    await fetchQuery(api.posts.getPostById, { postId: postId }),
+    await preloadQuery(api.comments.getCommentsByPostsId, {
+...
+export default async function PostIdRoute ({ params }: PostIdRouteProps) {
+  const { postId } = await params;
+  // const post = await fetchQuery(api.posts.getPostById, { postId: postId });
+
+   const [ post, preloadedComments, userId] = await Promise.all([
+    await fetchQuery(api.posts.getPostById, { postId: postId }),
+    await preloadQuery(api.comments.getCommentsByPostsId, {
+      postId: postId,
+    }),
+     await fetchQuery(api.presence.getUserId, {}, { token })
+  ])
+
+```
+
+# TEST - SHOULD SEE - "VIEWING NOW AND AN AVATAR IN BLOG POST VIEW
+# MAKE SOME CHANGES TO BEUTIFY 7:02
+# convex/presence.ts
+```javascript
+...
+import { ConvexError, v } from "convex/values"
+...
+   handler: async (ctx, { roomId, userId, sessionId, interval }) => {
+        // TODO: Add your auth check here
+        const user = await authComponent.safeGetAuthUser(ctx)
+        if (!user || user._id !== userId) {
+            throw new ConvexError("unautheoried")
+        }
+        return await presence.heartbeat(ctx, roomId, userId, sessionId, interval)
+    },
+})
+...
+export const list = query({
+    args: { roomToken: v.string() },
+    handler: async (ctx, { roomToken })=> {
+        // Avoid adding per-user reads so all subscription can share same cache
+        //eturn await presence.list(ctx, roomToken)
+        const entries = await presence.list(ctx, roomToken)
+        return await Promise.all(
+            entries.map(async(entry) => {
+                const user = await authComponent.getAnyUserById(ctx, entry.userId)
+                if (!user) {
+                    return entry
+                }
+                return {
+                    ...entry,
+                    name: user.name
+                }
+            })
+        )
+    }
+ ...   
+```
+
+# SETTING UP PROXY/MIDDLEWARE 7:05
+# app/proxy.ts
+```javascript
+import { NextRequest, NextResponse } from "next/server"
+import { getSessionCookie } from "better-auth/cookies"
+export async function proxy(request: NextRequest) {
+    const sessionCookie = getSessionCookie(request)
+
+    if (!sessionCookie) {
+        return NextResponse.redirect(new URL("login", request.url))
+    }
+    return NextResponse.next()
+}
+export const config = {
+    matcher: ["/create"],
+```
+}
