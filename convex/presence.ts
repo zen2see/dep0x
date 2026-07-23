@@ -17,7 +17,7 @@ export const heartbeat = mutation({
         // TODO: Add your auth check here
         const user = await authComponent.safeGetAuthUser(ctx)
         if (!user || user._id !== userId) {
-            throw new ConvexError("unautheoried")
+            throw new ConvexError("unauthorized")
         }
         return await presence.heartbeat(ctx, roomId, userId, sessionId, interval)
     },

@@ -3,13 +3,14 @@ import { getSessionCookie } from "better-auth/cookies"
 
 export async function proxy(request: NextRequest) {
     const sessionCookie = getSessionCookie(request)
-
+    // THIS IS NOT SECURE
+    // This is the recommended approach to optimistically redirect users
     if (!sessionCookie) {
-        return NextResponse.redirect(new URL("login", request.url))
+        return NextResponse.redirect(new URL("/auth/login", request.url))
     }
     return NextResponse.next()
 }
 
 export const config = {
-    matcher: ["/create"],
+    matcher: ["/blog", "/create"],
 }

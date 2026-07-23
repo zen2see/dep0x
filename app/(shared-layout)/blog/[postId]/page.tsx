@@ -5,7 +5,7 @@ import Image from "next/image";
 import { api } from "@/convex/_generated/api";
 import { fetchQuery, preloadQuery } from "convex/nextjs";
 import { Id } from "@/convex/_generated/dataModel";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { CommentSection } from "@/components/web/CommentSection";
 import { Metadata } from "next";
@@ -41,6 +41,10 @@ export default async function PostIdRoute ({ params }: PostIdRouteProps) {
     }),
     await fetchQuery(api.presence.getUserId, {}, { token })
   ])
+
+  if (!userId) {
+    return redirect("/auth/login")
+  }
 
   // Handle case where post is not found or has no title
   if (!post || !post.title) {

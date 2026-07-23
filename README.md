@@ -4026,7 +4026,7 @@ import presence from "@convex-dev/presence/convex.config";
 app.use(presence);
 ```
 
-# CONVEX COMPONENTS PACKAGE UP CODE AND DATA IN A SANDBOX THAT ALLOWS YOU 
+# CONVEX COMPONENTS PACKAGE UP CODE AND DATA IN A SANDBOX THAT ALLOWS YOU 7:03
 # TO CONFIDENTLY AND QUICKLY ADD NEW FEATURES TO YOUR BACKEND
 # ../onvex/presence.ts
 ```javascript
@@ -4150,7 +4150,7 @@ import { ConvexError, v } from "convex/values"
         // TODO: Add your auth check here
         const user = await authComponent.safeGetAuthUser(ctx)
         if (!user || user._id !== userId) {
-            throw new ConvexError("unautheoried")
+            throw new ConvexError("unauthorized")
         }
         return await presence.heartbeat(ctx, roomId, userId, sessionId, interval)
     },
@@ -4178,20 +4178,117 @@ export const list = query({
  ...   
 ```
 
-# SETTING UP PROXY/MIDDLEWARE 7:05
+# SETTING UP PROXY/MIDDLEWARE 7:05 - FROM BETTERAUTH
 # app/proxy.ts
 ```javascript
 import { NextRequest, NextResponse } from "next/server"
 import { getSessionCookie } from "better-auth/cookies"
 export async function proxy(request: NextRequest) {
     const sessionCookie = getSessionCookie(request)
-
+    // THIS IS NOT SECURE
+    // This is the recommended approach to optimistically redirect users
     if (!sessionCookie) {
-        return NextResponse.redirect(new URL("login", request.url))
+        return NextResponse.redirect(new URL("/auth/login", request.url))
     }
     return NextResponse.next()
 }
 export const config = {
-    matcher: ["/create"],
+    matcher: ["/blog", "/create"],
+}
 ```
 }
+
+# UPDATE [blog]/page.tsx
+# app/(shared-layout)/blog/[postId]/page.tsx
+```javascript
+...
+import { notFound, redirect } from "next/navigation";
+...
+export default async function PostIdRoute ({ params }: PostIdRouteProps) {
+  const { postId } = await params;
+  const token = await getToken();
+  // const post = await fetchQuery(api.posts.getPostById, { postId: postId });
+   const [ post, preloadedComments, userId] = await Promise.all([
+    await fetchQuery(api.posts.getPostById, { postId: postId }),
+    await preloadQuery(api.comments.getCommentsByPostsId, {
+      postId: postId,
+    }),
+    await fetchQuery(api.presence.getUserId, {}, { token })
+  ])
+  if (!userId) {
+    return redirect("/auth/login")
+  }
+  ...
+```
+
+
+# FIXING SKELETON LAYOUT ON MAIN BLOG PAGE
+# app/(shared-layout)/blog/page.tsx
+```javascript
+export default function BlogPage() {
+  return (
+    <div className="py-12">
+      <div className="text-center pb-12">
+        <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl"> Our Blog </h1>
+        <p className="pt-4 max-w-2xl mx-auto text-xl text-muted-foreground">
+          Insights, thoughts, and trends from our team.
+        </p>
+      </div>
+      {/* ADDED: Mounted search engine directly into layout flow */}
+      <div className="pb-8">
+        <BlogSearchBar />
+      </div>
+
+      <Suspense fallback={<SkeletonLoadingUi />}>
+        <LoadBlogList />
+      </Suspense>
+    </div>
+  );
+}
+```
+# FIXING VSCODE KEEPS CRASHING
+# vi ~/.bashrc
+# export NODE_OPTIONS="--max-old-space-size=4096" AT END OF FILE
+# source ~/.bashrc
+# VERIFY
+# node -e "console.log(v8.getHeapStatistics().heap_size_limit / 1024 / 1024 + ' MB')"
+# Success: It should now output roughly 4100 M
+# That confirms the fix worked perfectly! Your Node.js environment inside WSL2 
+# now successfully has access to 4288 MB (4.18 GB) of heap memory, up from the default ~1.5 GB limit.
+# Run rm -rf ~/.vscode-server/
+Open Windows Explorer and navigate to %APPDATA%\Code (typically C:\Users\<YourUsername>\AppData\Roaming\Code).Delete the Cache, CachedData, and CachedExtensions folders
+
+Press Ctrl + Shift + P to open the Command Palette.Type and select Help: Start Extension Bisect.VS Code will temporarily disable half of your extensions. Follow the prompts to check if the crashing continues until the exact bugged extension is isolated.
+
+"files.watcherExclude": {
+    "**/.claude/**": true,
+    "**/.github/agents/**": true
+}
+
+Inside your Ubuntu terminal, run this command to increase the file watcher limit:bash
+echo "fs.inotify.max_user_watches=524288" | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+
+# ADD LOADNG PAGE FOR TRANSITION WHEN CLICKING READ MORRE ON BLOG PAGE 7:21
+# app/(shared-layout)/blog/[postId]/loading.tsx
+```javascript
+import { Skeleton } from "@/components/ui/skeleton"
+export default function LoadingPage() {
+    return (
+        <div className="max-w-3xl mx-auto py-8 px-4">
+            <Skeleton className="h-10 w-24 mb-6" />
+            <Skeleton className="w-full h-[400px] mb-8 rounded-xl" />
+            <div className="space-y-4">
+                <Skeleton className="h-12 w-3/4" />
+                <Skeleton className="h-4 w-32" />
+            </div>
+            <div className="mt-8 space-y-2">
+                <Skeleton className="w-full h-4" />
+                <Skeleton className="w-full h-4" />
+                <Skeleton className="w-2/3 h-4" />
+            </div>
+        </div>
+    )
+}
+```
+
+
